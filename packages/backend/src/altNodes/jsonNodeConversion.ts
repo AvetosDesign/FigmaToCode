@@ -341,13 +341,27 @@ const processNodePair = async (
           parentCumulativeRotation + (jsonNode.rotation || 0),
         );
 
-        // Push the processed group children directly
+        // Push the processed group children directly. A GROUP has no Auto
+        // Layout of its own, so whatever arrangement its children had (e.g.
+        // two buttons placed side by side) exists only via their raw x/y —
+        // once the GROUP node itself is discarded here, that arrangement
+        // has no other representation. Mark each resulting node
+        // `layoutPositioning: "ABSOLUTE"` so designBundleTree.ts's existing
+        // `isAbsoluteInAutoLayout` escape hatch (built for a real Figma
+        // per-child "position absolutely" override) also captures inlined
+        // former-GROUP children, instead of silently letting them fall into
+        // the new parent's normal Auto Layout flow. Their x/y were already
+        // computed above relative to `parentNode` (the group's own parent,
+        // not the discarded group), via the absoluteBoundingBox diff — so
+        // no coordinate rebasing is needed here, only the flag.
         if (processedChild !== null) {
-          if (Array.isArray(processedChild)) {
-            processedChildren.push(...processedChild);
-          } else {
-            processedChildren.push(processedChild);
+          const resultNodes = Array.isArray(processedChild)
+            ? processedChild
+            : [processedChild];
+          for (const resultNode of resultNodes) {
+            (resultNode as any).layoutPositioning = "ABSOLUTE";
           }
+          processedChildren.push(...resultNodes);
         }
       }
     }
@@ -364,6 +378,32 @@ const processNodePair = async (
   // Set parent reference if parent is provided
   if (parentNode) {
     (jsonNode as any).parent = parentNode;
+  }
+
+  // D58: `jsonNode` originates entirely from `node.exportAsync({ format:
+  // "JSON_REST_V1" })` (nodesToJSON, above) — a static snapshot in
+  // Figma's REST API v1 shape, not live Plugin API property access.
+  // Found via a real, reproducible case: six related-product Cards with
+  // Figma's per-child "Position: Absolute" toggle enabled (no GROUP
+  // involved — confirmed by Sean directly in Figma), inside a real
+  // HORIZONTAL Auto Layout "Card grid" parent. Every one of them rendered
+  // with zero positioning at all — not wrong coordinates, nothing —
+  // meaning `layout.position` was never captured in Stage 1
+  // (`designBundleTree.ts`'s `isAbsoluteInAutoLayout` check reads
+  // `node.layoutPositioning === "ABSOLUTE"`, which depends entirely on
+  // this field surviving from that snapshot). `layoutPositioning` (the
+  // per-child Auto Layout "position absolutely" override) is a
+  // comparatively recent Figma feature — plausible the frozen REST API
+  // v1 export format simply never included it, even though it's
+  // declared in this project's own `api_types.ts` (a hand-written type,
+  // not a guarantee the export payload actually populates it). The live
+  // `figmaNode` parameter (the real Plugin API SceneNode, available at
+  // every level of this recursion) is authoritative here regardless of
+  // what the snapshot did or didn't carry — read it directly as an
+  // override whenever present, rather than trusting the snapshot alone
+  // for this one property.
+  if ("layoutPositioning" in figmaNode && (figmaNode as any).layoutPositioning) {
+    (jsonNode as any).layoutPositioning = (figmaNode as any).layoutPositioning;
   }
 
   // Ensure node has a unique name with simple numbering
