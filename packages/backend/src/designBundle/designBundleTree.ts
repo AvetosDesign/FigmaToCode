@@ -20,7 +20,6 @@ import { commonLetterSpacing, commonLineHeight } from "../common/commonTextHeigh
 // single exported type for that combination, so we work against a loosely-typed shape here
 // rather than fighting the type system — consistent with how the rest of the backend
 // (code.ts, jsonNodeConversion.ts) already treats `convertedSelection` as `any`.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ConvertedNode = any;
 
 const VECTOR_LIKE_TYPES = new Set([
@@ -193,7 +192,7 @@ const mapGradient = (paint: any): DesignBundleGradient | undefined => {
   return {
     kind,
     stops: stops.map((stop: any) => ({
-      hex: rgbaToHex8({ ...(stop.color ?? {}), a: (stop.color?.a ?? 1) * paintOpacity }),
+      hex: rgbaToHex8({ ...stop.color, a: (stop.color?.a ?? 1) * paintOpacity }),
       position: typeof stop.position === "number" ? stop.position : 0,
     })),
     handles: handles.map((handle: any) => ({ x: handle?.x ?? 0, y: handle?.y ?? 0 })),
