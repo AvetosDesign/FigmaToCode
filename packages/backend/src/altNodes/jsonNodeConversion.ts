@@ -345,12 +345,19 @@ const processNodePair = async (
         // Layout of its own, so whatever arrangement its children had (e.g.
         // two buttons placed side by side) exists only via their raw x/y —
         // once the GROUP node itself is discarded here, that arrangement
-        // has no other representation. Mark each resulting node
-        // `layoutPositioning: "ABSOLUTE"` so designBundleTree.ts's existing
-        // `isAbsoluteInAutoLayout` escape hatch (built for a real Figma
-        // per-child "position absolutely" override) also captures inlined
-        // former-GROUP children, instead of silently letting them fall into
-        // the new parent's normal Auto Layout flow. Their x/y were already
+        // has no other representation. Mark each resulting node with a
+        // bundle-only `inlinedFromGroup` flag rather than reusing the real
+        // `layoutPositioning: "ABSOLUTE"` field: this conversion path is
+        // shared by every codegen target (HTML, Tailwind, Flutter, SwiftUI,
+        // Compose), and `layoutPositioning` feeds real per-target behavior
+        // there (see `common/commonPosition.ts`'s `commonIsAbsolutePosition`,
+        // and the Flutter/Compose backends) as well as this file's own
+        // `adjustChildrenOrder`/`isRelative` checks below — stamping it here
+        // would silently change output for every target, not just the
+        // Design Bundle. `designBundleTree.ts`'s `isAbsoluteInAutoLayout`
+        // check reads this bundle-only flag in addition to the real field,
+        // so only the Design Bundle path captures inlined former-GROUP
+        // children as explicitly positioned. Their x/y were already
         // computed above relative to `parentNode` (the group's own parent,
         // not the discarded group), via the absoluteBoundingBox diff — so
         // no coordinate rebasing is needed here, only the flag.
@@ -359,7 +366,7 @@ const processNodePair = async (
             ? processedChild
             : [processedChild];
           for (const resultNode of resultNodes) {
-            (resultNode as any).layoutPositioning = "ABSOLUTE";
+            (resultNode as any).inlinedFromGroup = true;
           }
           processedChildren.push(...resultNodes);
         }

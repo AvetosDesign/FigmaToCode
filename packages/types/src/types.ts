@@ -377,6 +377,14 @@ export interface DesignBundleAsset {
   // accepts the same underlying value) — resolving the fill's raw bytes
   // directly, independent of whatever else the containing node renders.
   imageHash?: string;
+  // Multiplier between this asset's `width`/`height` (the node's logical
+  // layout size) and the exported file's actual pixel dimensions. Raster
+  // (PNG) assets are exported at a fixed 2x scale (see
+  // `exportDesignBundleAssets` in designBundleAssets.ts) — without this,
+  // a downstream consumer has no way to know the PNG is 2x without
+  // decoding it and comparing dimensions itself. Omitted for vector (SVG)
+  // assets, which have no fixed pixel scale.
+  scale?: number;
 }
 export interface DesignBundleColorStyle {
   name: string;

@@ -1,10 +1,29 @@
-import { DesignBundle, DesignBundleAsset, DesignBundleStyles, PluginSettings } from "types";
+import { DesignBundle, DesignBundleAsset, DesignBundleStyles, DesignNode, PluginSettings } from "types";
 import { nodesToJSON } from "../altNodes/jsonNodeConversion";
 import { addWarning, clearWarnings, warnings } from "../common/commonConversionWarnings";
 import { buildDesignNode, resetDesignBundleTreeState } from "./designBundleTree";
 import { collectTextStyleIds, resolveTextStyles } from "./designBundleTextStyles";
 import { exportDesignBundleAssets } from "./designBundleAssets";
 import { generateDesignBundleZip } from "./designBundleZip";
+
+// Clears assetRef/backgroundAssetRef on any node pointing at an asset that
+// failed to export (see exportDesignBundleAssets' failedAssetIds) — run
+// after filtering those ids out of the manifest's assets[] so a design's
+// nodes never reference an asset id that no longer appears anywhere in the
+// bundle (the whole point of the failedAssetIds plumbing; filtering
+// assets[] alone would just move the dangling reference from assets[] to
+// designs[].root...children[]).
+const clearFailedAssetRefs = (node: DesignNode, failedAssetIds: Set<string>) => {
+  if (node.assetRef && failedAssetIds.has(node.assetRef)) {
+    delete node.assetRef;
+  }
+  if (node.backgroundAssetRef && failedAssetIds.has(node.backgroundAssetRef)) {
+    delete node.backgroundAssetRef;
+  }
+  for (const child of node.children ?? []) {
+    clearFailedAssetRefs(child, failedAssetIds);
+  }
+};
 
 export const DESIGN_BUNDLE_SOURCE_TOOL = "FigmaToCode-fork/design-bundle@0.1.0";
 
@@ -51,25 +70,36 @@ export const buildDesignBundle = async (
     // top-level GROUP gets inlined into multiple sibling nodes (see
     // jsonNodeConversion.ts) — a top-level GROUP breaks the otherwise
     // clean 1:1 mapping between selected layers and designs[] entries.
-    // Handled explicitly here (falling back to converted node names)
-    // rather than silently mismatching names below.
+    // Matched by node id below (rather than array index) so this doesn't
+    // silently pair a converted entry with the wrong original selection
+    // layer once the two arrays are out of step.
     console.warn(
       "[design-bundle] convertedSelection count does not match selection count " +
-        "(likely a top-level GROUP was inlined) — falling back to converted node names.",
+        "(likely a top-level GROUP was inlined) — matching by node id instead of index.",
     );
   }
+
+  // Keyed by id so a converted entry is only ever paired with the
+  // selected layer it actually came from — an index-based lookup
+  // (`selection[index]`) silently drifts out of alignment as soon as one
+  // top-level GROUP expands into multiple entries, pairing every
+  // subsequent design with the wrong original layer's name instead of
+  // just failing to find one.
+  const selectionById = new Map(selection.map((s) => [s.id, s]));
 
   const assets: DesignBundleAsset[] = [];
   const styles: DesignBundleStyles = { colors: {}, textStyles: {} };
 
-  const designs = convertedSelection.map((node: any, index: number) => {
-    const originalNode = selection[index];
+  const designs = convertedSelection.map((node: any) => {
     const root = buildDesignNode(node, assets, styles, undefined);
+    const originalNode = selectionById.get(root.id);
     return {
       figmaNodeId: root.id,
       // Raw, as-authored Figma layer name only — no slug/title.
-      // Falls back to the converted node's own name if the index-aligned
-      // original selection entry is unavailable (see mismatch note above).
+      // Falls back to the converted node's own name when no original
+      // selection entry shares this id (e.g. this design came from an
+      // inlined GROUP's child, which was never itself a top-level
+      // selection entry — see mismatch note above).
       layerName: originalNode?.name ?? node.name ?? root.uniqueName,
       root,
     };
@@ -88,7 +118,24 @@ export const buildDesignBundle = async (
   // never surface these to the user.
   for (const w of textStyleWarnings) addWarning(w);
 
-  const exportedAssets = await exportDesignBundleAssets(assets);
+  const { exported: exportedAssets, failedAssetIds } = await exportDesignBundleAssets(assets);
+
+  // Drop any asset that failed to export from the manifest — otherwise
+  // design-bundle.json lists an asset with no corresponding file in the
+  // zip's /assets (exportDesignBundleAssets already logged a warning for
+  // each one via addWarning). Also clear any assetRef/backgroundAssetRef
+  // in the design tree that pointed at one of these, so nothing in the
+  // manifest references a dropped id.
+  const failedAssetIdSet = new Set(failedAssetIds);
+  const finalAssets =
+    failedAssetIdSet.size > 0
+      ? assets.filter((asset) => !failedAssetIdSet.has(asset.id))
+      : assets;
+  if (failedAssetIdSet.size > 0) {
+    for (const design of designs) {
+      clearFailedAssetRefs(design.root, failedAssetIdSet);
+    }
+  }
 
   const bundle: DesignBundle = {
     schemaVersion: 1,
@@ -101,7 +148,7 @@ export const buildDesignBundle = async (
       sourceTool: "FigmaToCode-fork",
     },
     designs,
-    assets,
+    assets: finalAssets,
     styles,
   };
 
@@ -116,7 +163,7 @@ export const buildDesignBundle = async (
     zip,
     fileName,
     designCount: designs.length,
-    assetCount: assets.length,
+    assetCount: finalAssets.length,
     warnings: [...warnings],
   };
 };

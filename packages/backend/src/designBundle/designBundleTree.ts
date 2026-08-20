@@ -12,6 +12,7 @@ import {
   DesignNodeType,
 } from "types";
 import { commonLetterSpacing, commonLineHeight } from "../common/commonTextHeightSpacing";
+import { DESIGN_BUNDLE_RASTER_SCALE } from "./designBundleAssets";
 
 // The tree produced by `nodesToJSON` (packages/backend/src/altNodes/jsonNodeConversion.ts)
 // is a standard Figma REST API v1 `Node` (packages/backend/src/api_types.ts) plus a handful
@@ -356,16 +357,29 @@ const mapTextSegments = (
   if (segments.length === 0) {
     // Fallback for nodes where per-run segmentation wasn't collected
     // (see jsonNodeConversion.ts — segments are only gathered when the
-    // source node's style actually varies at the run level).
+    // source node's style actually varies at the run level). `node.style`
+    // here is the raw REST API v1 `TypeStyle` (see jsonNodeConversion.ts —
+    // `Object.assign(jsonNode, jsonNode.style)` — `style` itself survives
+    // alongside the flattened copy), which does carry `lineHeightPx`
+    // (declared in api_types.ts) even though it isn't read elsewhere in
+    // this file — compute the same px-per-fontSize ratio the segmented
+    // path below uses instead of hardcoding 0, which silently dropped
+    // line-height for any text node without per-run style variation.
     const fallbackFill = mapFill(node.fills?.[0], styles);
+    const fallbackFontSize = node.style?.fontSize ?? 0;
+    const fallbackLineHeightPx = node.style?.lineHeightPx;
+    const fallbackLineHeight =
+      typeof fallbackLineHeightPx === "number" && fallbackFontSize > 0
+        ? fallbackLineHeightPx / fallbackFontSize
+        : 0;
     return [
       {
         uniqueId: `${uniqueName}_span`,
         characters: node.characters ?? "",
         fontFamily: node.style?.fontFamily ?? "",
-        fontSize: node.style?.fontSize ?? 0,
+        fontSize: fallbackFontSize,
         fontWeight: String(node.style?.fontWeight ?? "400"),
-        lineHeight: 0,
+        lineHeight: fallbackLineHeight,
         letterSpacing: node.style?.letterSpacing ?? 0,
         textCase: node.style?.textCase ?? "ORIGINAL",
         textDecoration: node.style?.textDecoration ?? "NONE",
@@ -393,7 +407,13 @@ const mapTextSegments = (
     const textFill = mapFill(segment.fills?.[0], styles);
 
     return {
-      uniqueId: `${uniqueName}_span_${index}`,
+      // The converter (jsonNodeConversion.ts) already assigns each segment a
+      // `uniqueId` — 1-based, zero-padded (`_span_01`, `_span_02`, ...) for
+      // multi-segment text, `_span` for a lone segment. Prefer that value
+      // over regenerating one here (0-based, unpadded) so the two don't
+      // disagree; only fall back to a freshly generated id if the segment
+      // somehow arrived without one.
+      uniqueId: segment.uniqueId ?? `${uniqueName}_span_${index}`,
       characters: segment.characters ?? "",
       fontFamily: segment.fontName?.family ?? segment.fontFamily ?? "",
       fontSize,
@@ -487,7 +507,13 @@ export const buildDesignNode = (
   // auto-layout frame — caught by a synthetic "decorative blob inside a
   // vertical form" fixture. Root designs[] entries have no parent, so
   // position is always included there.
-  const isAbsoluteInAutoLayout = node.layoutPositioning === "ABSOLUTE";
+  // `inlinedFromGroup` is a Design-Bundle-only flag set by
+  // jsonNodeConversion.ts for children of an inlined GROUP (see its
+  // comment there) — kept separate from the real `layoutPositioning`
+  // field so this bundle-specific treatment doesn't leak into the other
+  // codegen targets that share that conversion path.
+  const isAbsoluteInAutoLayout =
+    node.layoutPositioning === "ABSOLUTE" || node.inlinedFromGroup === true;
   if (
     parentLayoutMode === undefined ||
     parentLayoutMode === "NONE" ||
@@ -584,6 +610,10 @@ export const buildDesignNode = (
       kind: type === "IMAGE" ? "raster" : "vector",
       width: Math.round(node.width ?? 0),
       height: Math.round(node.height ?? 0),
+      // Only raster (PNG) exports have a fixed pixel scale relative to
+      // `width`/`height` above — see exportDesignBundleAssets. Vector
+      // (SVG) assets scale losslessly, so `scale` is left unset for those.
+      ...(type === "IMAGE" ? { scale: DESIGN_BUNDLE_RASTER_SCALE } : {}),
     };
     assets.push(asset);
     if (identityKey) {
@@ -618,6 +648,11 @@ export const buildDesignNode = (
     } else {
       const fileName = nextAssetFileName(`${uniqueName}_bg`, "png");
       const assetId = `asset_${String(assets.length + 1).padStart(2, "0")}`;
+      // Note: unlike the leaf IMAGE/VECTOR branch above, this asset is
+      // resolved via `figma.getImageByHash(...).getBytesAsync()` (see
+      // exportDesignBundleAssets), which returns the fill's own raw image
+      // bytes as-is — no `exportAsync` SCALE constraint is applied here,
+      // so `scale` is intentionally left unset rather than assumed to be 2x.
       const asset: DesignBundleAsset = {
         id: assetId,
         figmaNodeId: node.id,

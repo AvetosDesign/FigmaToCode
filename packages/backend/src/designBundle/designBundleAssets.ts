@@ -7,6 +7,32 @@ export interface ExportedDesignBundleAsset {
   bytes: Uint8Array;
 }
 
+export interface DesignBundleAssetExportResult {
+  exported: ExportedDesignBundleAsset[];
+  // Ids (DesignBundleAsset.id) of assets that failed to export — a missing
+  // node, a getImageByHash miss, or a thrown exportAsync/getBytesAsync call.
+  // `buildDesignBundle` (designBundleMain.ts) uses this to drop the asset
+  // from the manifest's `assets[]` (and any DesignNode.assetRef/
+  // backgroundAssetRef pointing at it) so `design-bundle.json` never
+  // references a file that doesn't actually exist in the zip's /assets —
+  // previously a failed export was only ever logged as a warning, leaving
+  // the dangling reference in place.
+  failedAssetIds: string[];
+}
+
+// Shared with designBundleTree.ts so the manifest's `DesignBundleAsset.scale`
+// field always matches the constraint actually passed to `exportAsync`
+// below, rather than a second hardcoded "2" drifting out of sync with it.
+export const DESIGN_BUNDLE_RASTER_SCALE = 2;
+
+// Caps how many assets are exported concurrently. Fully sequential export
+// makes total time grow linearly with selection size for no benefit — each
+// `exportAsync`/`getBytesAsync` call is an independent round trip through
+// Figma's renderer, not CPU-bound work competing for the same resource, so a
+// small in-flight limit shortens wall-clock time on large selections without
+// the unbounded memory/scheduling cost of firing every export at once.
+const ASSET_EXPORT_CONCURRENCY = 4;
+
 /**
  * Explicit Images-API asset export. FigmaToCode's default codegen path
  * leaves image `src` as placehold.co placeholders and never calls
@@ -18,13 +44,16 @@ export interface ExportedDesignBundleAsset {
  * Raster (IMAGE) nodes export as PNG at 2x. Vector
  * (VECTOR/STAR/POLYGON/BOOLEAN_OPERATION/LINE) nodes export as SVG so a
  * downstream consumer can inline them directly instead of rasterizing.
+ * Exports run with bounded concurrency (see ASSET_EXPORT_CONCURRENCY) rather
+ * than one at a time.
  */
 export const exportDesignBundleAssets = async (
   assets: DesignBundleAsset[],
-): Promise<ExportedDesignBundleAsset[]> => {
+): Promise<DesignBundleAssetExportResult> => {
   const exported: ExportedDesignBundleAsset[] = [];
+  const failedAssetIds: string[] = [];
 
-  for (const asset of assets) {
+  const exportOne = async (asset: DesignBundleAsset): Promise<void> => {
     // A background-image asset (DesignNode.backgroundAssetRef, not
     // assetRef) carries `imageHash` instead — resolved via
     // `figma.getImageByHash`, not `node.exportAsync()`. The containing
@@ -44,7 +73,8 @@ export const exportDesignBundleAssets = async (
           addWarning(
             `Could not export background-image asset (${asset.fileName}) — image hash ${asset.imageHash} not found.`,
           );
-          continue;
+          failedAssetIds.push(asset.id);
+          return;
         }
         const bytes = await image.getBytesAsync();
         exported.push({ fileName: asset.fileName, bytes });
@@ -54,8 +84,9 @@ export const exportDesignBundleAssets = async (
             error instanceof Error ? error.message : String(error)
           }`,
         );
+        failedAssetIds.push(asset.id);
       }
-      continue;
+      return;
     }
 
     const figmaNode = (await figma.getNodeByIdAsync(
@@ -66,7 +97,8 @@ export const exportDesignBundleAssets = async (
       addWarning(
         `Could not export asset for node ${asset.figmaNodeId} (${asset.fileName}) — node missing or not exportable.`,
       );
-      continue;
+      failedAssetIds.push(asset.id);
+      return;
     }
 
     try {
@@ -79,7 +111,7 @@ export const exportDesignBundleAssets = async (
       } else {
         const bytes = await figmaNode.exportAsync({
           format: "PNG",
-          constraint: { type: "SCALE", value: 2 },
+          constraint: { type: "SCALE", value: DESIGN_BUNDLE_RASTER_SCALE },
         });
         exported.push({ fileName: asset.fileName, bytes });
       }
@@ -89,8 +121,26 @@ export const exportDesignBundleAssets = async (
           error instanceof Error ? error.message : String(error)
         }`,
       );
+      failedAssetIds.push(asset.id);
     }
-  }
+  };
 
-  return exported;
+  // Simple bounded worker pool: each of up to ASSET_EXPORT_CONCURRENCY
+  // workers pulls the next asset off a shared cursor and exports it, so at
+  // most that many exports are ever in flight at once. `exported`/
+  // `failedAssetIds` are mutated by `exportOne` directly rather than
+  // collected per-worker, since downstream consumption (designBundleMain.ts,
+  // generateDesignBundleZip) keys off `fileName`/`asset.id`, not array order.
+  let nextIndex = 0;
+  const worker = async (): Promise<void> => {
+    while (nextIndex < assets.length) {
+      const asset = assets[nextIndex];
+      nextIndex += 1;
+      await exportOne(asset);
+    }
+  };
+  const workerCount = Math.min(ASSET_EXPORT_CONCURRENCY, assets.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+  return { exported, failedAssetIds };
 };
