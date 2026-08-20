@@ -5,8 +5,8 @@ import { encodeUtf8Text as encodeText } from "./designBundleUtils";
 
 /**
  * Packages a Design Bundle as a zip: `design-bundle.json` at the root plus
- * an `assets/` folder, matching the on-disk layout documented in
- * docs/03-design-bundle-schema-draft.md's "Asset handling" section.
+ * an `assets/` folder containing every exported raster/vector asset,
+ * referenced from the manifest by relative path.
  */
 export const generateDesignBundleZip = (
   bundle: DesignBundle,

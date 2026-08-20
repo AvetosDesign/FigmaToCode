@@ -41,8 +41,8 @@ export const collectTextStyleIds = (node: DesignNode, into: Set<string> = new Se
 
 /**
  * Resolves a set of textStyleIds against Figma's style registry
- * (`getStyleByIdAsync`) into the bundle's `styles.textStyles` dictionary
- * (D23). Done as a separate pass after tree-building rather than inline in
+ * (`getStyleByIdAsync`) into the bundle's `styles.textStyles` dictionary.
+ * Done as a separate pass after tree-building rather than inline in
  * `buildDesignNode`, since `buildDesignNode` is synchronous (matches the
  * existing colors/variables handling in `designBundleTree.ts`, which never
  * needs an async call because bound-variable data is already present

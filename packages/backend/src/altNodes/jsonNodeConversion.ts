@@ -380,15 +380,15 @@ const processNodePair = async (
     (jsonNode as any).parent = parentNode;
   }
 
-  // D58: `jsonNode` originates entirely from `node.exportAsync({ format:
+  // `jsonNode` originates entirely from `node.exportAsync({ format:
   // "JSON_REST_V1" })` (nodesToJSON, above) — a static snapshot in
   // Figma's REST API v1 shape, not live Plugin API property access.
   // Found via a real, reproducible case: six related-product Cards with
   // Figma's per-child "Position: Absolute" toggle enabled (no GROUP
-  // involved — confirmed by Sean directly in Figma), inside a real
-  // HORIZONTAL Auto Layout "Card grid" parent. Every one of them rendered
-  // with zero positioning at all — not wrong coordinates, nothing —
-  // meaning `layout.position` was never captured in Stage 1
+  // involved — confirmed directly in Figma), inside a real HORIZONTAL
+  // Auto Layout "Card grid" parent. Every one of them rendered with zero
+  // positioning at all — not wrong coordinates, nothing — meaning
+  // `layout.position` was never captured
   // (`designBundleTree.ts`'s `isAbsoluteInAutoLayout` check reads
   // `node.layoutPositioning === "ABSOLUTE"`, which depends entirely on
   // this field surviving from that snapshot). `layoutPositioning` (the

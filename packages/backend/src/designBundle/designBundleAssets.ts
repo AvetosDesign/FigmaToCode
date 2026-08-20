@@ -8,17 +8,16 @@ export interface ExportedDesignBundleAsset {
 }
 
 /**
- * Explicit Images-API asset export (D9). FigmaToCode's default codegen path
+ * Explicit Images-API asset export. FigmaToCode's default codegen path
  * leaves image `src` as placehold.co placeholders and never calls
  * `exportAsync` for plain layout/text output — the Design Bundle needs real
  * files regardless of which codegen path (if any) is otherwise in use, so
  * this is a standalone step over the asset manifest `buildDesignNode`
  * already collected, not a reuse of any HTML/Tailwind/etc. image handling.
  *
- * Raster (IMAGE) nodes export as PNG at 2x, per
- * docs/03-design-bundle-schema-draft.md's asset-handling section. Vector
- * (VECTOR/STAR/POLYGON/BOOLEAN_OPERATION/LINE) nodes export as SVG so
- * Stage 2 can inline them directly instead of rasterizing.
+ * Raster (IMAGE) nodes export as PNG at 2x. Vector
+ * (VECTOR/STAR/POLYGON/BOOLEAN_OPERATION/LINE) nodes export as SVG so a
+ * downstream consumer can inline them directly instead of rasterizing.
  */
 export const exportDesignBundleAssets = async (
   assets: DesignBundleAsset[],
@@ -26,17 +25,18 @@ export const exportDesignBundleAssets = async (
   const exported: ExportedDesignBundleAsset[] = [];
 
   for (const asset of assets) {
-    // D51: a background-image asset (DesignNode.backgroundAssetRef, not
+    // A background-image asset (DesignNode.backgroundAssetRef, not
     // assetRef) carries `imageHash` instead — resolved via
     // `figma.getImageByHash`, not `node.exportAsync()`. The containing
     // node also has real child content painted on top of this fill (the
     // whole reason it's a background-image asset rather than a normal
-    // leaf IMAGE asset — see designBundleTree.ts's D51 comment), so
-    // exporting *that node* would flatten the children into the raster
-    // too. `getImageByHash` resolves the fill's own raw bytes directly,
-    // independent of anything else the node renders. Figma's REST API v1
-    // calls this same value `imageRef`; the Plugin API's `getImageByHash`
-    // accepts it under the name `hash` — same underlying image reference.
+    // leaf IMAGE asset — see designBundleTree.ts's matching comment on
+    // `backgroundAssetRef`), so exporting *that node* would flatten the
+    // children into the raster too. `getImageByHash` resolves the fill's
+    // own raw bytes directly, independent of anything else the node
+    // renders. Figma's REST API v1 calls this same value `imageRef`; the
+    // Plugin API's `getImageByHash` accepts it under the name `hash` —
+    // same underlying image reference.
     if (asset.imageHash) {
       try {
         const image = figma.getImageByHash(asset.imageHash);
