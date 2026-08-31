@@ -55,6 +55,22 @@ export type WordPressOutputMode = "theme" | "designBundle";
 export interface WordPressSettings {
   wpOutputMode: WordPressOutputMode;
   wpIncludeFonts: boolean;
+  /**
+   * Phase 9 tweak: the WordPress tab's "Theme Name" field (CodePanel.tsx
+   * renders it adjacent to "Include Fonts" via WordPressPanel.tsx's
+   * WordPressThemeNameField, relabeled "Bundle Name" when wpOutputMode is
+   * "designBundle" -- same underlying setting, just a different label/
+   * help text per D115's original two-output split). Pre-populated with
+   * the loaded Figma file's name (figma.root.name) each time the plugin
+   * starts -- see code.ts's getUserSettings -- and deliberately never
+   * restored from clientStorage across sessions (see the
+   * pluginSettingWillChange handler there), so switching Figma files
+   * doesn't leave a stale name typed for a different project. Empty
+   * string means "use the Figma file name automatically," the same
+   * fallback generateThemeFiles.ts's styleCssHeader()/
+   * generateDesignBundleZip.ts already used before this field existed.
+   */
+  wpThemeName: string;
 }
 export interface PluginSettings
   extends

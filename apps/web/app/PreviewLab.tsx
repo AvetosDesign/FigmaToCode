@@ -30,6 +30,12 @@ const defaultSettings: PluginSettings = {
   fontFamilyCustomConfig: {},
   wpOutputMode: "theme",
   wpIncludeFonts: true,
+  // Phase 9 tweak (D126): the standalone web preview has no Figma
+  // document to read a file name from, unlike the real plugin's
+  // code.ts (getUserSettings seeds this from figma.root.name there) --
+  // an empty string here just means the "Theme Name"/"Bundle Name"
+  // field falls back to its own placeholder text.
+  wpThemeName: "",
 };
 
 const htmlMarkup = `<article class="feature-card">

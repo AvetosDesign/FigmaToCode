@@ -2,6 +2,7 @@ import { Download, LoaderCircle } from "lucide-react";
 import { WordPressGenerationSummary, WordPressOutputMode, Warning } from "types";
 import { Button } from "./ui/button";
 import WarningsPanel from "./WarningsPanel";
+import FormField from "./CustomPrefixInput";
 
 /**
  * Phase 9 (D115/D118, wired up per D122-D125): the WordPress tab's own
@@ -23,6 +24,66 @@ import WarningsPanel from "./WarningsPanel";
 const outputLabel: Record<WordPressOutputMode, string> = {
   theme: "WP Theme",
   designBundle: "Design Bundle",
+};
+
+// Phase 9 tweak: one shared text setting (code.ts's
+// userPluginSettings.wpThemeName) behind two labels/help texts, since
+// "Theme Name" doesn't read right once the selected output is a raw
+// Design Bundle download rather than an installable WP theme.
+const themeNameFieldLabel: Record<WordPressOutputMode, string> = {
+  theme: "Theme Name",
+  designBundle: "Bundle Name",
+};
+
+const themeNameFieldHelp: Record<WordPressOutputMode, string> = {
+  theme:
+    'Used as the "Theme Name:" header in the generated theme\'s style.css and as the downloaded file\'s name. Defaults to the loaded Figma file\'s name.',
+  designBundle:
+    "Used as the downloaded zip's file name. Defaults to the loaded Figma file's name.",
+};
+
+const themeNameFieldPlaceholder: Record<WordPressOutputMode, string> = {
+  theme: "e.g. My Site Theme",
+  designBundle: "e.g. My Site Bundle",
+};
+
+/**
+ * Phase 9 tweak: the "Theme Name" text field CodePanel.tsx renders
+ * adjacent to the "Include Fonts" checkbox in the WordPress tab's
+ * "Download Options" group. Kept here rather than added to
+ * codegenPreferenceOptions.ts's generic preference list because that
+ * mechanism only models checkboxes (`individual_select`) and button-group
+ * selects (`select`) -- a free-text field with a per-mode label needs its
+ * own small component, the same reasoning TailwindSettings.tsx's
+ * "Advanced Settings" fields already follow for Tailwind's tab. Uses the
+ * same `FormField` those fields use (from CustomPrefixInput.tsx), with
+ * the default `disallowedPattern` (blocks whitespace) overridden since a
+ * theme/file name routinely has spaces -- only filesystem-hostile
+ * characters are blocked here instead, since this value ends up in a
+ * generated file name either way (`toSlug()` in
+ * generateWordPressTheme.ts/generateDesignBundleZip.ts).
+ */
+export const WordPressThemeNameField = ({
+  outputMode,
+  value,
+  onChange,
+}: {
+  outputMode: WordPressOutputMode;
+  value: string;
+  onChange: (value: string) => void;
+}) => {
+  return (
+    <FormField
+      label={themeNameFieldLabel[outputMode]}
+      initialValue={value}
+      onValueChange={(newValue) => onChange(String(newValue))}
+      placeholder={themeNameFieldPlaceholder[outputMode]}
+      helpText={themeNameFieldHelp[outputMode]}
+      type="text"
+      disallowedPattern={/[\\/:*?"<>|]/}
+      disallowedMessage={'Cannot contain \\ / : * ? " < > |'}
+    />
+  );
 };
 
 export const WordPressDownloadButton = ({

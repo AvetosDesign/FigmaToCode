@@ -37,9 +37,15 @@ export interface GenerateDesignBundleZipResult {
   summary: WordPressGenerationSummary;
 }
 
+export interface GenerateDesignBundleZipOptions {
+  /** Phase 9 tweak: the WordPress tab's "Theme Name" field, relabeled "Bundle Name" for this output mode (same setting as `generateWordPressTheme`'s `themeName`, code.ts's `userPluginSettings.wpThemeName`) -- overrides this zip's own `fileName`. Blank/undefined falls back to `bundle.meta.figmaFileName`, same as before this option existed. */
+  bundleName?: string;
+}
+
 export const generateDesignBundleZip = async (
   selection: readonly SceneNode[],
   settings: PluginSettings,
+  options: GenerateDesignBundleZipOptions = {},
 ): Promise<GenerateDesignBundleZipResult> => {
   const { bundle, assets, warnings } = await buildBundleFromSelection(selection, settings);
 
@@ -58,7 +64,9 @@ export const generateDesignBundleZip = async (
     );
   }
 
-  const rootName = toSlug(bundle.meta.figmaFileName || "design-bundle");
+  const rootName = toSlug(
+    options.bundleName?.trim() || bundle.meta.figmaFileName || "design-bundle",
+  );
 
   return {
     zip,

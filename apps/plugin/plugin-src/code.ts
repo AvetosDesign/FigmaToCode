@@ -55,6 +55,11 @@ export const defaultPluginSettings: PluginSettings = {
   // original OE2 plan.
   wpOutputMode: "theme",
   wpIncludeFonts: true,
+  // Phase 9 tweak: placeholder only -- getUserSettings() always
+  // overwrites this with figma.root.name right after computing settings
+  // below, since this field is intentionally session-only (see its own
+  // doc comment on WordPressSettings in types.ts).
+  wpThemeName: "",
 };
 
 // A helper type guard to ensure the key belongs to the PluginSettings type
@@ -87,6 +92,14 @@ const getUserSettings = async () => {
   };
 
   userPluginSettings = updatedPluginSrcSettings as PluginSettings;
+  // Phase 9 tweak: "Theme Name" is re-seeded from the current file's name
+  // on every plugin launch rather than restored from clientStorage above
+  // -- otherwise reopening the plugin in a different Figma file would
+  // show a stale name typed for a previous project. Edits made during
+  // this session still work (held in the in-memory userPluginSettings
+  // object); the pluginSettingWillChange handler below excludes this key
+  // when persisting so it can't leak into the next session either.
+  userPluginSettings.wpThemeName = figma.root.name;
   console.log("[DEBUG] getUserSettings - Final settings:", userPluginSettings);
   return userPluginSettings;
 };
@@ -417,12 +430,19 @@ const downloadWordPressOutput = async (outputMode: WordPressOutputMode) => {
   // generateThemeFiles, "designBundle" just zips the bundle + assets
   // directly (see generateDesignBundleZip.ts for why this isn't the old
   // Phase 7 button's code reused, just rebuilt on the same shared base).
+  // Phase 9 tweak: the WordPress tab's "Theme Name" field (relabeled
+  // "Bundle Name" for Design Bundle) flows straight through as each
+  // output's own name override -- blank means "fall back to the Figma
+  // file name," same as before this field existed.
   const result =
     outputMode === "theme"
       ? await generateWordPressTheme(selection, pluginSettings, {
           pluginVersion: PLUGIN_VERSION,
+          themeName: pluginSettings.wpThemeName,
         })
-      : await generateDesignBundleZip(selection, pluginSettings);
+      : await generateDesignBundleZip(selection, pluginSettings, {
+          bundleName: pluginSettings.wpThemeName,
+        });
 
   // D123 follow-up: no artificial size ceiling here, unlike
   // downloadProject's own maxMessageSizeBytes check above. That 10MB cap
@@ -570,7 +590,13 @@ const standardMode = async () => {
       const { key, value } = msg as SettingWillChangeMessage<unknown>;
       console.log(`[DEBUG] Setting changed: ${key} = ${value}`);
       (userPluginSettings as any)[key] = value;
-      figma.clientStorage.setAsync("userPluginSettings", userPluginSettings);
+      // Phase 9 tweak: never persist wpThemeName -- see its doc comment
+      // on WordPressSettings (types.ts) and getUserSettings above for why
+      // it's session-only. Deletes off a shallow copy rather than a
+      // destructured-rest omit so there's no unused-binding lint noise.
+      const settingsToPersist = { ...userPluginSettings };
+      delete (settingsToPersist as any).wpThemeName;
+      figma.clientStorage.setAsync("userPluginSettings", settingsToPersist);
       safeRun(userPluginSettings);
     } else if (msg.type === "get-selection-json") {
       console.log("[DEBUG] get-selection-json message received");

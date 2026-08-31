@@ -20,6 +20,7 @@ import DownloadMenu from "./DownloadMenu";
 import {
   WordPressDownloadButton,
   WordPressFeedbackPanel,
+  WordPressThemeNameField,
 } from "./WordPressPanel";
 
 interface CodePanelProps {
@@ -286,6 +287,19 @@ const CodePanel = (props: CodePanelProps) => {
                   <TailwindSettings
                     settings={settings}
                     onPreferenceChanged={onPreferenceChanged}
+                  />
+                )}
+                {/* Phase 9 tweak: "Theme Name" (relabeled "Bundle Name"
+                    for Design Bundle) -- lives in this same "Download
+                    Options" group, directly under "Include Fonts", so it
+                    reads as adjacent to it. */}
+                {selectedFramework === "WordPress" && settings && (
+                  <WordPressThemeNameField
+                    outputMode={settings.wpOutputMode ?? "theme"}
+                    value={settings.wpThemeName ?? ""}
+                    onChange={(value) =>
+                      onPreferenceChanged("wpThemeName", value)
+                    }
                   />
                 )}
               </SettingsGroup>

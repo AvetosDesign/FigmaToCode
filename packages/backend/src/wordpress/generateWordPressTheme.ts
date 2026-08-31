@@ -25,6 +25,8 @@ import { toSlug } from "./core/slugify";
 export interface GenerateWordPressThemeOptions {
   /** See `GenerateThemeOptions.cliVersion`'s own doc comment for why this fork requires an explicit version string rather than reading one off disk -- the caller (code.ts) supplies F2C's own plugin version. */
   pluginVersion: string;
+  /** Phase 9 tweak: the WordPress tab's "Theme Name" field (code.ts's `userPluginSettings.wpThemeName`) -- passed straight through as `GenerateThemeOptions.themeName`, and slugified (see `toSlug` below) to also override the theme's internal slug (pattern-slug namespace, `functions.php` handle, and this result's own `fileName`), not just the style.css header. Blank/undefined falls back to `bundle.meta.figmaFileName`, same as before this option existed. */
+  themeName?: string;
 }
 
 export interface GenerateWordPressThemeResult {
@@ -45,10 +47,14 @@ export const generateWordPressTheme = async (
     warnings: bundleWarnings,
   } = await buildBundleFromSelection(selection, settings);
 
+  const themeName = options.themeName?.trim() || undefined;
+  const themeSlugOverride = themeName ? toSlug(themeName) : undefined;
+
   const sink = createInMemorySink();
-  const themeResult = await generateThemeFiles(bundle, assets, sink, undefined, {
+  const themeResult = await generateThemeFiles(bundle, assets, sink, themeSlugOverride, {
     downloadFonts: settings.wpIncludeFonts,
     cliVersion: options.pluginVersion,
+    themeName,
   });
 
   const zip = zipSync(sink.files, { level: 6 });
