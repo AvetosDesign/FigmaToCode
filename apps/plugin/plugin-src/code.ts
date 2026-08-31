@@ -422,13 +422,18 @@ const downloadWordPressTheme = async (outputMode: WordPressOutputMode) => {
     pluginVersion: PLUGIN_VERSION,
   });
 
-  const maxMessageSizeBytes = 10 * 1024 * 1024;
-  if (result.zip.byteLength > maxMessageSizeBytes) {
-    throw new Error(
-      `Theme too large (${Math.round(result.zip.byteLength / 1024 / 1024)}MB). Try selecting fewer images or smaller components.`,
-    );
-  }
-
+  // D123 follow-up: no artificial size ceiling here, unlike
+  // downloadProject's own maxMessageSizeBytes check above. That 10MB cap
+  // was sized for lightweight code-project zips (HTML/Vite/Next.js) and
+  // never made sense for image-heavy WordPress themes -- a handful of
+  // 2x-scale raster exports routinely produces a zip several times that
+  // size with nothing wrong. There's no real ceiling to enforce in its
+  // place either: a Figma plugin has no disk to offload to (see D117/
+  // D121 on why the CLI's disk-backed OutputSink wasn't ported), so the
+  // whole zip has to cross figma.ui.postMessage in one message regardless
+  // of size. If that ever genuinely fails for a given export, it'll throw
+  // and surface through the same try/catch every other error here goes
+  // through -- not a silent hang.
   const zip = result.zip.buffer.slice(
     result.zip.byteOffset,
     result.zip.byteOffset + result.zip.byteLength,
