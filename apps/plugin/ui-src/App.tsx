@@ -14,6 +14,10 @@ import {
   DownloadProjectFormat,
   ProjectDownloadErrorMessage,
   ProjectZipMessage,
+  WordPressOutputMode,
+  WordPressZipMessage,
+  WordPressDownloadErrorMessage,
+  WordPressGenerationSummary,
 } from "types";
 import { postUISettingsChangingMessage } from "./messaging";
 import copy from "copy-to-clipboard";
@@ -32,6 +36,16 @@ interface AppState {
   // Set by the "empty"/"code" backend messages -- see PluginUI's
   // isEmptySelection prop for why this can't be derived from `code`.
   isEmptySelection: boolean;
+  // Phase 9 (D122 follow-up): the WordPress tab's own "WP Theme" download
+  // -- kept separate from isDownloadingProject/projectDownloadError above
+  // since it's a visually distinct button (WordPressPanel's
+  // WordPressDownloadButton, not DownloadMenu) even though the plugin
+  // sandbox side shares one busy-flag between both (see code.ts).
+  isDownloadingWordPress: boolean;
+  wordPressDownloadError: string | null;
+  // Summary from the most recent successful WP Theme generation, shown in
+  // the WordPress tab's feedback panel until the next attempt starts.
+  wordPressResult: { fileName: string; warnings: Warning[]; summary: WordPressGenerationSummary } | null;
 }
 
 const emptyPreview = { size: { width: 0, height: 0 }, content: "" };
@@ -60,6 +74,9 @@ export default function App() {
     isDownloadingProject: false,
     projectDownloadError: null,
     isEmptySelection: true,
+    isDownloadingWordPress: false,
+    wordPressDownloadError: null,
+    wordPressResult: null,
   });
 
   const rootStyles = getComputedStyle(document.documentElement);
@@ -164,6 +181,42 @@ export default function App() {
           break;
         }
 
+        case "wordpress-zip": {
+          const zipMessage = untypedMessage as WordPressZipMessage;
+          const blob = new Blob([zipMessage.zip], {
+            type: "application/zip",
+          });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = zipMessage.fileName;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(url);
+          setState((prevState) => ({
+            ...prevState,
+            isDownloadingWordPress: false,
+            wordPressDownloadError: null,
+            wordPressResult: {
+              fileName: zipMessage.fileName,
+              warnings: zipMessage.warnings,
+              summary: zipMessage.summary,
+            },
+          }));
+          break;
+        }
+
+        case "wordpress-download-error": {
+          const downloadError = untypedMessage as WordPressDownloadErrorMessage;
+          setState((prevState) => ({
+            ...prevState,
+            isDownloadingWordPress: false,
+            wordPressDownloadError: downloadError.error,
+          }));
+          break;
+        }
+
         default:
           break;
       }
@@ -215,6 +268,21 @@ export default function App() {
       "*",
     );
   };
+  const handleDownloadWordPress = (outputMode: WordPressOutputMode) => {
+    if (state.isDownloadingWordPress) {
+      return;
+    }
+
+    setState((prevState) => ({
+      ...prevState,
+      isDownloadingWordPress: true,
+      wordPressDownloadError: null,
+    }));
+    parent.postMessage(
+      { pluginMessage: { type: "download-wordpress", outputMode } },
+      "*",
+    );
+  };
   const darkMode = isDarkFigmaBackground(figmaColorBgValue);
 
   useEffect(() => {
@@ -244,6 +312,10 @@ export default function App() {
         isDownloadingProject={state.isDownloadingProject}
         projectDownloadError={state.projectDownloadError}
         isEmptySelection={state.isEmptySelection}
+        onDownloadWordPress={handleDownloadWordPress}
+        isDownloadingWordPress={state.isDownloadingWordPress}
+        wordPressDownloadError={state.wordPressDownloadError}
+        wordPressResult={state.wordPressResult}
       />
     </div>
   );

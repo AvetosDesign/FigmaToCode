@@ -14,6 +14,8 @@ import {
   PluginSettings,
   SolidColorConversion,
   Warning,
+  WordPressOutputMode,
+  WordPressGenerationSummary,
 } from "types";
 import {
   preferenceOptions,
@@ -50,6 +52,16 @@ type PluginUIProps = {
   // apart from "WordPress selected, real content exists" -- this bit is
   // what the EmptyState gate below actually needs.
   isEmptySelection: boolean;
+  // Phase 9 (D122 follow-up): the WordPress tab's own "WP Theme" download
+  // -- see WordPressPanel.tsx's WordPressDownloadButton/FeedbackPanel.
+  onDownloadWordPress?: (outputMode: WordPressOutputMode) => void;
+  isDownloadingWordPress?: boolean;
+  wordPressDownloadError?: string | null;
+  wordPressResult?: {
+    fileName: string;
+    warnings: Warning[];
+    summary: WordPressGenerationSummary;
+  } | null;
 };
 
 // Phase 9 (D115): "WordPress" added as a fifth tab, peer to the code-
@@ -221,6 +233,10 @@ export const PluginUI = (props: PluginUIProps) => {
                 onDownloadProject={props.onDownloadProject}
                 isDownloadingProject={props.isDownloadingProject}
                 projectDownloadError={props.projectDownloadError}
+                onDownloadWordPress={props.onDownloadWordPress}
+                isDownloadingWordPress={props.isDownloadingWordPress}
+                wordPressDownloadError={props.wordPressDownloadError}
+                wordPressResult={props.wordPressResult}
               />
 
               {props.colors.length > 0 && (

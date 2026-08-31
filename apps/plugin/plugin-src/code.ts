@@ -7,6 +7,7 @@ import {
   htmlMain,
   extractProjectImageNodeIds,
   generateProjectZip,
+  generateWordPressTheme,
   postSettingsChanged,
   replaceProjectImagePlaceholders,
 } from "backend";
@@ -21,6 +22,7 @@ import {
   DownloadProjectFormat,
   PluginSettings,
   SettingWillChangeMessage,
+  WordPressOutputMode,
 } from "types";
 
 let userPluginSettings: PluginSettings;
@@ -333,7 +335,8 @@ const downloadProject = async (format: DownloadProjectFormat) => {
     pluginSettings.framework === "Compose" ||
     // Phase 9: WordPress's two outputs ("WP Theme"/"Design Bundle") are
     // not DownloadProjectFormat values and don't go through this
-    // download-project path at all -- see CodePanel's WordPress branch.
+    // download-project path at all -- WP Theme has its own parallel
+    // downloadWordPressTheme() below, see D122's roadmap note.
     pluginSettings.framework === "WordPress" ||
     !allowedFormatsByFramework[pluginSettings.framework].includes(format)
   ) {
@@ -387,6 +390,57 @@ const downloadProject = async (format: DownloadProjectFormat) => {
     zip,
     format,
     fileName: `${rootName}-${format}.zip`,
+  });
+};
+
+// Phase 9 (D122 follow-up): F2C's own plugin version, handed to
+// generateThemeFiles as `cliVersion` (see that option's doc comment for
+// why this fork requires an explicit string instead of reading one off
+// disk the way the CLI original does). Bump this alongside
+// apps/plugin/package.json's own `version` field.
+const PLUGIN_VERSION = "1.0.0";
+
+const downloadWordPressTheme = async (outputMode: WordPressOutputMode) => {
+  if (outputMode !== "theme") {
+    // "Design Bundle" has no generation path yet -- see D122's roadmap
+    // note (D119 removed the old standalone zip-building code, and
+    // rebuilding it is a separate, unscheduled follow-up). The UI itself
+    // already keeps this option disabled (WordPressPanel.tsx), so this
+    // is a defense-in-depth check, not the primary gate.
+    throw new Error(`${outputMode} export is not available yet.`);
+  }
+
+  const pluginSettings = { ...userPluginSettings };
+  const selection = [...figma.currentPage.selection];
+  if (selection.length === 0) {
+    throw new Error(
+      "Please select at least one layer to generate a WordPress theme from.",
+    );
+  }
+
+  const result = await generateWordPressTheme(selection, pluginSettings, {
+    pluginVersion: PLUGIN_VERSION,
+  });
+
+  const maxMessageSizeBytes = 10 * 1024 * 1024;
+  if (result.zip.byteLength > maxMessageSizeBytes) {
+    throw new Error(
+      `Theme too large (${Math.round(result.zip.byteLength / 1024 / 1024)}MB). Try selecting fewer images or smaller components.`,
+    );
+  }
+
+  const zip = result.zip.buffer.slice(
+    result.zip.byteOffset,
+    result.zip.byteOffset + result.zip.byteLength,
+  );
+
+  figma.ui.postMessage({
+    type: "wordpress-zip",
+    zip,
+    outputMode,
+    fileName: result.fileName,
+    warnings: result.warnings,
+    summary: result.summary,
   });
 };
 
@@ -455,6 +509,46 @@ const standardMode = async () => {
         figma.ui.postMessage({
           type: "project-download-error",
           error: `Failed to create project: ${
+            error instanceof Error ? error.message : "Unknown error occurred"
+          }`,
+        });
+      } finally {
+        isDownloadingProject = false;
+        if (rerunAfterDownload) {
+          rerunAfterDownload = false;
+          void safeRun(userPluginSettings);
+        }
+      }
+    } else if (msg.type === "download-wordpress") {
+      // Shares isDownloadingProject/rerunAfterDownload with the
+      // download-project path above -- both are "a heavy async
+      // figma-API-driven export is in flight, pause reconversion until
+      // it finishes" the same way, and there's no benefit to tracking
+      // that as two independent flags that could race against each other.
+      if (isLoading) {
+        figma.ui.postMessage({
+          type: "wordpress-download-error",
+          error: "Please wait for the current conversion to finish.",
+        });
+        return;
+      }
+
+      if (isDownloadingProject) {
+        figma.ui.postMessage({
+          type: "wordpress-download-error",
+          error: "A project download is already in progress.",
+        });
+        return;
+      }
+
+      isDownloadingProject = true;
+      try {
+        await downloadWordPressTheme(msg.outputMode as WordPressOutputMode);
+      } catch (error) {
+        console.error("WordPress theme download failed:", error);
+        figma.ui.postMessage({
+          type: "wordpress-download-error",
+          error: `Failed to create WordPress theme: ${
             error instanceof Error ? error.message : "Unknown error occurred"
           }`,
         });

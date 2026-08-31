@@ -126,6 +126,42 @@ export type ProjectDownloadErrorMessage = Message & {
   error: string;
 };
 
+/**
+ * Phase 9 (D122 follow-up, stage 2 of 2 part 2): the WordPress tab's own
+ * "WP Theme" download flow -- parallel to DownloadProjectMessage/
+ * ProjectZipMessage/ProjectDownloadErrorMessage above but kept as its own
+ * message trio rather than reusing those, since a WordPress output isn't
+ * a DownloadProjectFormat (it's produced by wp-figma-gen's ported
+ * generation logic -- see backend's generateWordPressTheme.ts -- not any
+ * of the code-gen frameworks' own zip templates in zipGenerator.ts).
+ * "Design Bundle" isn't included here: it stays disabled (D118/D122's
+ * roadmap note) until its own generation path is built.
+ */
+export type WordPressDownloadMessage = Message & {
+  type: "download-wordpress";
+  outputMode: WordPressOutputMode;
+};
+/** Counts summarizing what a WP Theme download produced, for the WordPress tab's feedback panel -- the closest equivalent it has to the other tabs' code preview. */
+export interface WordPressGenerationSummary {
+  designCount: number;
+  assetCount: number;
+  patternCount: number;
+  resolvedFontFamilies: string[];
+  unresolvedFontFamilies: string[];
+}
+export type WordPressZipMessage = Message & {
+  type: "wordpress-zip";
+  zip: ArrayBuffer;
+  outputMode: WordPressOutputMode;
+  fileName: string;
+  warnings: Warning[];
+  summary: WordPressGenerationSummary;
+};
+export type WordPressDownloadErrorMessage = Message & {
+  type: "wordpress-download-error";
+  error: string;
+};
+
 
 // Nodes
 export type ParentNode = BaseNode & ChildrenMixin;

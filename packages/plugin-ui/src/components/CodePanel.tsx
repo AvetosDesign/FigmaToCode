@@ -4,6 +4,9 @@ import {
   LocalCodegenPreferenceOptions,
   PluginSettings,
   SelectPreferenceOptions,
+  WordPressOutputMode,
+  WordPressGenerationSummary,
+  Warning,
 } from "types";
 import { useMemo, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -32,6 +35,14 @@ interface CodePanelProps {
   onDownloadProject?: (format: DownloadProjectFormat) => void;
   isDownloadingProject?: boolean;
   projectDownloadError?: string | null;
+  onDownloadWordPress?: (outputMode: WordPressOutputMode) => void;
+  isDownloadingWordPress?: boolean;
+  wordPressDownloadError?: string | null;
+  wordPressResult?: {
+    fileName: string;
+    warnings: Warning[];
+    summary: WordPressGenerationSummary;
+  } | null;
 }
 
 const CodePanel = (props: CodePanelProps) => {
@@ -48,6 +59,10 @@ const CodePanel = (props: CodePanelProps) => {
     onDownloadProject,
     isDownloadingProject = false,
     projectDownloadError,
+    onDownloadWordPress,
+    isDownloadingWordPress = false,
+    wordPressDownloadError,
+    wordPressResult,
   } = props;
   // Phase 9 (D115/D118): the WordPress tab has no generated code at all
   // (convertToCode.ts's WordPress case returns "" deliberately) -- but it
@@ -176,6 +191,8 @@ const CodePanel = (props: CodePanelProps) => {
             {selectedFramework === "WordPress" ? (
               <WordPressDownloadButton
                 outputMode={settings?.wpOutputMode ?? "theme"}
+                onDownload={onDownloadWordPress}
+                isDownloading={isDownloadingWordPress}
               />
             ) : (
               <>
@@ -200,6 +217,12 @@ const CodePanel = (props: CodePanelProps) => {
       {projectDownloadError && (
         <p className="text-sm text-destructive" role="alert">
           {projectDownloadError}
+        </p>
+      )}
+
+      {wordPressDownloadError && (
+        <p className="text-sm text-destructive" role="alert">
+          {wordPressDownloadError}
         </p>
       )}
 
@@ -278,7 +301,10 @@ const CodePanel = (props: CodePanelProps) => {
         {isCodeEmpty ? (
           <EmptyState />
         ) : selectedFramework === "WordPress" ? (
-          <WordPressFeedbackPanel outputMode={settings?.wpOutputMode ?? "theme"} />
+          <WordPressFeedbackPanel
+            outputMode={settings?.wpOutputMode ?? "theme"}
+            result={wordPressResult}
+          />
         ) : (
           <>
             {showCodeCopyButton && (
