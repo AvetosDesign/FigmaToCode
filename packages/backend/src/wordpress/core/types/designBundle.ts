@@ -296,6 +296,21 @@ export interface DesignBundleAsset {
   // accepts the same underlying value) — resolving the fill's raw bytes
   // directly, independent of whatever else the containing node renders.
   imageHash?: string;
+  // Multiplier between this asset's `width`/`height` (the node's logical
+  // layout size) and the exported file's actual pixel dimensions. Raster
+  // (PNG) assets are exported at a fixed 2x scale (see
+  // `exportDesignBundleAssets` in fromSelection/designBundleAssets.ts) —
+  // without this, a downstream consumer has no way to know the PNG is 2x
+  // without decoding it and comparing dimensions itself. Omitted for
+  // vector (SVG) assets, which have no fixed pixel scale.
+  //
+  // F2C port note: this field existed in the original F2C source this
+  // schema was mirrored from (packages/types/src/types.ts, pre-D119) but
+  // was missing from the CLI repo's own copy of this schema (a schema
+  // drift discovered while restoring fromSelection/designBundleTree.ts,
+  // which sets this field) -- added here to match the code that actually
+  // produces it.
+  scale?: number;
 }
 export interface DesignBundleColorStyle {
   name: string;
