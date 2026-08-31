@@ -44,6 +44,12 @@ type PluginUIProps = {
   onDownloadProject?: (format: DownloadProjectFormat) => void;
   isDownloadingProject?: boolean;
   projectDownloadError?: string | null;
+  // Whether the current Figma selection is empty. Deliberately separate
+  // from `code === ""`: WordPress's `code` is always "" by design (see
+  // convertToCode.ts), so that check alone can't tell "nothing selected"
+  // apart from "WordPress selected, real content exists" -- this bit is
+  // what the EmptyState gate below actually needs.
+  isEmptySelection: boolean;
 };
 
 // Phase 9 (D115): "WordPress" added as a fifth tab, peer to the code-
@@ -109,9 +115,7 @@ const FrameworkTabs = ({
                 ? isWordPress
                   ? "bg-green-600 text-white shadow-xs hover:bg-green-600 hover:text-white dark:bg-green-600 dark:hover:bg-green-600"
                   : "bg-primary text-primary-foreground shadow-xs hover:bg-primary hover:text-primary-foreground dark:hover:bg-primary"
-                : isWordPress
-                  ? "bg-muted text-green-700 hover:bg-green-600/90 hover:text-white dark:text-green-400 dark:hover:bg-green-600/90 dark:hover:text-white"
-                  : "bg-muted text-foreground hover:bg-primary/90 hover:text-primary-foreground dark:hover:bg-primary/90"
+                : "bg-muted text-foreground hover:bg-primary/90 hover:text-primary-foreground dark:hover:bg-primary/90"
             }`}
             onClick={() => {
               setSelectedFramework(tab as Framework);
@@ -141,7 +145,7 @@ export const PluginUI = (props: PluginUIProps) => {
     return <DelayedLoading />;
   }
 
-  const isEmpty = props.code === "";
+  const isEmpty = props.isEmptySelection;
   const warnings = props.warnings ?? [];
 
   return (

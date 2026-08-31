@@ -28,6 +28,8 @@ const defaultSettings: PluginSettings = {
   thresholdPercent: 15,
   baseFontFamily: "",
   fontFamilyCustomConfig: {},
+  wpOutputMode: "theme",
+  wpIncludeFonts: true,
 };
 
 const htmlMarkup = `<article class="feature-card">
@@ -376,6 +378,7 @@ export default function PreviewLab() {
             selectedFramework={selectedFramework}
             setSelectedFramework={handleFrameworkChanged}
             onPreferenceChanged={handlePreferenceChanged}
+            isEmptySelection={previewState === "empty"}
           />
         </div>
       </div>
@@ -393,6 +396,7 @@ type PluginPreviewProps = {
     key: keyof PluginSettings,
     value: PluginSettings[keyof PluginSettings],
   ) => void;
+  isEmptySelection: boolean;
 };
 
 function PluginPreview({
@@ -402,6 +406,7 @@ function PluginPreview({
   selectedFramework,
   setSelectedFramework,
   onPreferenceChanged,
+  isEmptySelection,
 }: PluginPreviewProps) {
   return (
     <article className="min-w-0 w-full max-w-190 overflow-hidden rounded-2xl border bg-[oklch(0.965_0.006_145)] shadow-[0_1px_2px_oklch(0_0_0/8%),0_12px_32px_oklch(0.18_0.03_154/12%),0_30px_60px_oklch(0.18_0.03_154/7%)] dark:bg-[oklch(0.205_0.015_154)]">
@@ -433,6 +438,7 @@ function PluginPreview({
             colors={[]}
             gradients={[]}
             warnings={warnings}
+            isEmptySelection={isEmptySelection}
           />
         </div>
       </div>

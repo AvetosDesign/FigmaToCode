@@ -29,6 +29,9 @@ interface AppState {
   warnings: Warning[];
   isDownloadingProject: boolean;
   projectDownloadError: string | null;
+  // Set by the "empty"/"code" backend messages -- see PluginUI's
+  // isEmptySelection prop for why this can't be derived from `code`.
+  isEmptySelection: boolean;
 }
 
 const emptyPreview = { size: { width: 0, height: 0 }, content: "" };
@@ -56,6 +59,7 @@ export default function App() {
     warnings: [],
     isDownloadingProject: false,
     projectDownloadError: null,
+    isEmptySelection: true,
   });
 
   const rootStyles = getComputedStyle(document.documentElement);
@@ -84,6 +88,7 @@ export default function App() {
             ...conversionMessage,
             selectedFramework: conversionMessage.settings.framework,
             isLoading: false,
+            isEmptySelection: false,
           }));
           break;
 
@@ -106,6 +111,7 @@ export default function App() {
             colors: [],
             gradients: [],
             isLoading: false,
+            isEmptySelection: true,
           }));
           break;
 
@@ -118,6 +124,7 @@ export default function App() {
             gradients: [],
             code: `Error :(\n// ${errorMessage.error}`,
             isLoading: false,
+            isEmptySelection: false,
           }));
           break;
 
@@ -236,6 +243,7 @@ export default function App() {
         onDownloadProject={handleDownloadProject}
         isDownloadingProject={state.isDownloadingProject}
         projectDownloadError={state.projectDownloadError}
+        isEmptySelection={state.isEmptySelection}
       />
     </div>
   );
