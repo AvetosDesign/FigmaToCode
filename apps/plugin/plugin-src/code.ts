@@ -47,6 +47,12 @@ export const defaultPluginSettings: PluginSettings = {
   thresholdPercent: 15,
   baseFontFamily: "",
   fontFamilyCustomConfig: {},
+  // Phase 9 (D115/D118): WordPress tab defaults -- "WP Theme" is the
+  // primary output (Design Bundle is the secondary, lower-visibility
+  // option per D115), and Include Fonts defaults checked per D115's
+  // original OE2 plan.
+  wpOutputMode: "theme",
+  wpIncludeFonts: true,
 };
 
 // A helper type guard to ensure the key belongs to the PluginSettings type
@@ -327,6 +333,10 @@ const downloadProject = async (format: DownloadProjectFormat) => {
   const pluginSettings = { ...userPluginSettings };
   if (
     pluginSettings.framework === "Compose" ||
+    // Phase 9: WordPress's two outputs ("WP Theme"/"Design Bundle") are
+    // not DownloadProjectFormat values and don't go through this
+    // download-project path at all -- see CodePanel's WordPress branch.
+    pluginSettings.framework === "WordPress" ||
     !allowedFormatsByFramework[pluginSettings.framework].includes(format)
   ) {
     throw new Error(

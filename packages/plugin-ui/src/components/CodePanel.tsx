@@ -14,6 +14,10 @@ import SettingsGroup from "./SettingsGroup";
 import FrameworkTabs from "./FrameworkTabs";
 import { TailwindSettings } from "./TailwindSettings";
 import DownloadMenu from "./DownloadMenu";
+import {
+  WordPressDownloadButton,
+  WordPressFeedbackPanel,
+} from "./WordPressPanel";
 
 interface CodePanelProps {
   code: string;
@@ -45,7 +49,15 @@ const CodePanel = (props: CodePanelProps) => {
     isDownloadingProject = false,
     projectDownloadError,
   } = props;
-  const isCodeEmpty = code === "";
+  // Phase 9 (D115/D118): the WordPress tab has no generated code at all
+  // (convertToCode.ts's WordPress case returns "" deliberately) -- but it
+  // still needs its own settings panel (WordPress Options, Download
+  // Options) and feedback panel to show, which the rest of this file
+  // otherwise gates on "isCodeEmpty". Treat WordPress as never empty here;
+  // its own branches below (WordPressDownloadButton/WordPressFeedbackPanel)
+  // handle the "nothing to show yet" case explicitly instead of falling
+  // into EmptyState.
+  const isCodeEmpty = code === "" && selectedFramework !== "WordPress";
 
   // Helper function to add the prefix before every class (or className) in the code.
   // It finds every occurrence of class="..." or className="..." and, for each class,
@@ -130,6 +142,10 @@ const CodePanel = (props: CodePanelProps) => {
       "showLayerNames",
       "embedImages",
       "embedVectors",
+      // Phase 9 (D115): WordPress's "Include Fonts" checkbox lives in the
+      // renamed-for-this-tab "Download Options" group below, not a new
+      // grouping mechanism.
+      "wpIncludeFonts",
     ];
 
     // Group preferences by category
@@ -157,18 +173,26 @@ const CodePanel = (props: CodePanelProps) => {
         </p>
         {!isCodeEmpty && (
           <div className="flex items-center gap-1.5">
-            {onDownloadProject && canDownloadProject && (
-              <DownloadMenu
-                framework={selectedFramework}
-                onDownload={onDownloadProject}
-                isDownloading={isDownloadingProject}
+            {selectedFramework === "WordPress" ? (
+              <WordPressDownloadButton
+                outputMode={settings?.wpOutputMode ?? "theme"}
               />
+            ) : (
+              <>
+                {onDownloadProject && canDownloadProject && (
+                  <DownloadMenu
+                    framework={selectedFramework}
+                    onDownload={onDownloadProject}
+                    isDownloading={isDownloadingProject}
+                  />
+                )}
+                <CopyButton
+                  value={prefixedCode}
+                  onMouseEnter={handleButtonHover}
+                  onMouseLeave={handleButtonLeave}
+                />
+              </>
             )}
-            <CopyButton
-              value={prefixedCode}
-              onMouseEnter={handleButtonHover}
-              onMouseLeave={handleButtonLeave}
-            />
           </div>
         )}
       </div>
@@ -222,7 +246,14 @@ const CodePanel = (props: CodePanelProps) => {
             selectedFramework === "Tailwind") && (
             <div className={hasSettingsBeforeStyling ? "mt-2" : undefined}>
               <SettingsGroup
-                title="Styling Options"
+                title={
+                  // Phase 9 (D115): renamed for the WordPress tab, where
+                  // "Include Fonts" is the only control and "styling" isn't
+                  // really what it's choosing.
+                  selectedFramework === "WordPress"
+                    ? "Download Options"
+                    : "Styling Options"
+                }
                 settings={stylingPreferences}
                 selectedSettings={settings}
                 onPreferenceChanged={onPreferenceChanged}
@@ -246,6 +277,8 @@ const CodePanel = (props: CodePanelProps) => {
       >
         {isCodeEmpty ? (
           <EmptyState />
+        ) : selectedFramework === "WordPress" ? (
+          <WordPressFeedbackPanel outputMode={settings?.wpOutputMode ?? "theme"} />
         ) : (
           <>
             {showCodeCopyButton && (

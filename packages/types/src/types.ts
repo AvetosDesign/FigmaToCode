@@ -1,6 +1,17 @@
 import "@figma/plugin-typings";
 // Settings
-export type Framework = "Flutter" | "SwiftUI" | "HTML" | "Tailwind" | "Compose";
+export type Framework =
+  | "Flutter"
+  | "SwiftUI"
+  | "HTML"
+  | "Tailwind"
+  | "Compose"
+  // Phase 9 (Figma -> WordPress pipeline, see AvetosDesign's
+  // theme-creator-for-figma repo): a target peer to the code-generation
+  // frameworks above, not a code-generation language itself -- selecting
+  // it doesn't show generated code (see PluginSettings.wpOutputMode/
+  // WordPressSettings below and CodePanel's WordPress-specific branch).
+  | "WordPress";
 export interface HTMLSettings {
   showLayerNames: boolean;
   embedImages: boolean;
@@ -31,13 +42,28 @@ export interface SwiftUISettings {
 export interface ComposeSettings {
   composeGenerationMode: "snippet" | "composable" | "screen";
 }
+/**
+ * Phase 9 UI spec (D115): the WordPress tab's own two settings -- which of
+ * its two outputs is selected ("WP Theme" vs. "Design Bundle", the
+ * two-option button-group under "WordPress Options"), and the "Include
+ * Fonts" checkbox under "Download Options" (D115: defaulted checked,
+ * governs a Google Fonts network call at generation time). Neither output
+ * is wired to real generation yet -- see CodePanel's WordPress branch and
+ * D118 in the decisions log.
+ */
+export type WordPressOutputMode = "theme" | "designBundle";
+export interface WordPressSettings {
+  wpOutputMode: WordPressOutputMode;
+  wpIncludeFonts: boolean;
+}
 export interface PluginSettings
   extends
     HTMLSettings,
     TailwindSettings,
     FlutterSettings,
     SwiftUISettings,
-    ComposeSettings {
+    ComposeSettings,
+    WordPressSettings {
   framework: Framework;
   useOldPluginVersion2025: boolean;
   responsiveRoot: boolean;

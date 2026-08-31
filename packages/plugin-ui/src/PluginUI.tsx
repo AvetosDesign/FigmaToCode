@@ -50,7 +50,18 @@ type PluginUIProps = {
   designBundleWarnings?: Warning[];
 };
 
-const frameworks: Framework[] = ["HTML", "Tailwind", "Flutter", "SwiftUI"];
+// Phase 9 (D115): "WordPress" added as a fifth tab, peer to the code-
+// generation frameworks -- not itself a code-generation language (see
+// CodePanel's dedicated WordPress branch). "Compose" stays deliberately
+// unlisted here, same as before this change -- it has real preference
+// options (composeGenerationMode) but isn't surfaced as a top-level tab.
+const frameworks: Framework[] = [
+  "HTML",
+  "Tailwind",
+  "Flutter",
+  "SwiftUI",
+  "WordPress",
+];
 const LOADING_INDICATOR_DELAY_MS = 250;
 
 const DelayedLoading = () => {
@@ -83,26 +94,38 @@ const FrameworkTabs = ({
   setShowAbout,
 }: FrameworkTabsProps) => {
   return (
-    <div className="grid grid-cols-4 sm:grid-cols-2 md:grid-cols-4 gap-1 grow">
-      {frameworks.map((tab) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          key={`tab ${tab}`}
-          aria-pressed={selectedFramework === tab && !showAbout}
-          className={`w-full h-8 rounded-md text-sm ${
-            selectedFramework === tab && !showAbout
-              ? "bg-primary text-primary-foreground shadow-xs hover:bg-primary hover:text-primary-foreground dark:hover:bg-primary"
-              : "bg-muted text-foreground hover:bg-primary/90 hover:text-primary-foreground dark:hover:bg-primary/90"
-          }`}
-          onClick={() => {
-            setSelectedFramework(tab as Framework);
-            setShowAbout(false);
-          }}
-        >
-          {tab}
-        </Button>
-      ))}
+    <div className="grid grid-cols-5 sm:grid-cols-3 md:grid-cols-5 gap-1 grow">
+      {frameworks.map((tab) => {
+        const isSelected = selectedFramework === tab && !showAbout;
+        // Phase 9 (D115): "a green WordPress tab" -- distinguishes it from
+        // the blue/primary code-generation frameworks, consistent with
+        // green already being this UI's own accent color elsewhere
+        // (SettingsGroup's toggle checkmarks, CodePanel's hover ring).
+        const isWordPress = tab === "WordPress";
+        return (
+          <Button
+            variant="ghost"
+            size="sm"
+            key={`tab ${tab}`}
+            aria-pressed={isSelected}
+            className={`w-full h-8 rounded-md text-sm ${
+              isSelected
+                ? isWordPress
+                  ? "bg-green-600 text-white shadow-xs hover:bg-green-600 hover:text-white dark:bg-green-600 dark:hover:bg-green-600"
+                  : "bg-primary text-primary-foreground shadow-xs hover:bg-primary hover:text-primary-foreground dark:hover:bg-primary"
+                : isWordPress
+                  ? "bg-muted text-green-700 hover:bg-green-600/90 hover:text-white dark:text-green-400 dark:hover:bg-green-600/90 dark:hover:text-white"
+                  : "bg-muted text-foreground hover:bg-primary/90 hover:text-primary-foreground dark:hover:bg-primary/90"
+            }`}
+            onClick={() => {
+              setSelectedFramework(tab as Framework);
+              setShowAbout(false);
+            }}
+          >
+            {tab}
+          </Button>
+        );
+      })}
     </div>
   );
 };
