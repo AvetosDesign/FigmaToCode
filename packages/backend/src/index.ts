@@ -11,3 +11,4 @@ export {
 export { run } from "./code";
 export * from "./messaging";
 export { generateWordPressTheme } from "./wordpress/generateWordPressTheme";
+export { generateDesignBundleZip } from "./wordpress/generateDesignBundleZip";

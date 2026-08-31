@@ -8,6 +8,7 @@ import {
   extractProjectImageNodeIds,
   generateProjectZip,
   generateWordPressTheme,
+  generateDesignBundleZip,
   postSettingsChanged,
   replaceProjectImagePlaceholders,
 } from "backend";
@@ -336,7 +337,7 @@ const downloadProject = async (format: DownloadProjectFormat) => {
     // Phase 9: WordPress's two outputs ("WP Theme"/"Design Bundle") are
     // not DownloadProjectFormat values and don't go through this
     // download-project path at all -- WP Theme has its own parallel
-    // downloadWordPressTheme() below, see D122's roadmap note.
+    // downloadWordPressOutput() below (D125 handles both outputs).
     pluginSettings.framework === "WordPress" ||
     !allowedFormatsByFramework[pluginSettings.framework].includes(format)
   ) {
@@ -400,27 +401,28 @@ const downloadProject = async (format: DownloadProjectFormat) => {
 // apps/plugin/package.json's own `version` field.
 const PLUGIN_VERSION = "1.0.0";
 
-const downloadWordPressTheme = async (outputMode: WordPressOutputMode) => {
-  if (outputMode !== "theme") {
-    // "Design Bundle" has no generation path yet -- see D122's roadmap
-    // note (D119 removed the old standalone zip-building code, and
-    // rebuilding it is a separate, unscheduled follow-up). The UI itself
-    // already keeps this option disabled (WordPressPanel.tsx), so this
-    // is a defense-in-depth check, not the primary gate.
-    throw new Error(`${outputMode} export is not available yet.`);
-  }
-
+const downloadWordPressOutput = async (outputMode: WordPressOutputMode) => {
   const pluginSettings = { ...userPluginSettings };
   const selection = [...figma.currentPage.selection];
   if (selection.length === 0) {
     throw new Error(
-      "Please select at least one layer to generate a WordPress theme from.",
+      outputMode === "theme"
+        ? "Please select at least one layer to generate a WordPress theme from."
+        : "Please select at least one layer to generate a Design Bundle from.",
     );
   }
 
-  const result = await generateWordPressTheme(selection, pluginSettings, {
-    pluginVersion: PLUGIN_VERSION,
-  });
+  // D125: both outputs share D122's buildBundleFromSelection as their
+  // translation layer -- "theme" feeds it into D121's ported
+  // generateThemeFiles, "designBundle" just zips the bundle + assets
+  // directly (see generateDesignBundleZip.ts for why this isn't the old
+  // Phase 7 button's code reused, just rebuilt on the same shared base).
+  const result =
+    outputMode === "theme"
+      ? await generateWordPressTheme(selection, pluginSettings, {
+          pluginVersion: PLUGIN_VERSION,
+        })
+      : await generateDesignBundleZip(selection, pluginSettings);
 
   // D123 follow-up: no artificial size ceiling here, unlike
   // downloadProject's own maxMessageSizeBytes check above. That 10MB cap
@@ -548,7 +550,7 @@ const standardMode = async () => {
 
       isDownloadingProject = true;
       try {
-        await downloadWordPressTheme(msg.outputMode as WordPressOutputMode);
+        await downloadWordPressOutput(msg.outputMode as WordPressOutputMode);
       } catch (error) {
         console.error("WordPress theme download failed:", error);
         figma.ui.postMessage({

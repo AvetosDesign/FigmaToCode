@@ -39,6 +39,7 @@ interface CodePanelProps {
   isDownloadingWordPress?: boolean;
   wordPressDownloadError?: string | null;
   wordPressResult?: {
+    outputMode: WordPressOutputMode;
     fileName: string;
     warnings: Warning[];
     summary: WordPressGenerationSummary;

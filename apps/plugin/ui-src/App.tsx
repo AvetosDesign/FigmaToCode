@@ -45,7 +45,12 @@ interface AppState {
   wordPressDownloadError: string | null;
   // Summary from the most recent successful WP Theme generation, shown in
   // the WordPress tab's feedback panel until the next attempt starts.
-  wordPressResult: { fileName: string; warnings: Warning[]; summary: WordPressGenerationSummary } | null;
+  wordPressResult: {
+    outputMode: WordPressOutputMode;
+    fileName: string;
+    warnings: Warning[];
+    summary: WordPressGenerationSummary;
+  } | null;
 }
 
 const emptyPreview = { size: { width: 0, height: 0 }, content: "" };
@@ -199,6 +204,7 @@ export default function App() {
             isDownloadingWordPress: false,
             wordPressDownloadError: null,
             wordPressResult: {
+              outputMode: zipMessage.outputMode,
               fileName: zipMessage.fileName,
               warnings: zipMessage.warnings,
               summary: zipMessage.summary,
