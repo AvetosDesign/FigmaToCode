@@ -14,8 +14,6 @@ import {
   DownloadProjectFormat,
   ProjectDownloadErrorMessage,
   ProjectZipMessage,
-  DesignBundleZipMessage,
-  DesignBundleErrorMessage,
 } from "types";
 import { postUISettingsChangingMessage } from "./messaging";
 import copy from "copy-to-clipboard";
@@ -31,9 +29,6 @@ interface AppState {
   warnings: Warning[];
   isDownloadingProject: boolean;
   projectDownloadError: string | null;
-  isExportingDesignBundle: boolean;
-  designBundleExportError: string | null;
-  designBundleWarnings: Warning[];
 }
 
 const emptyPreview = { size: { width: 0, height: 0 }, content: "" };
@@ -61,9 +56,6 @@ export default function App() {
     warnings: [],
     isDownloadingProject: false,
     projectDownloadError: null,
-    isExportingDesignBundle: false,
-    designBundleExportError: null,
-    designBundleWarnings: [],
   });
 
   const rootStyles = getComputedStyle(document.documentElement);
@@ -165,39 +157,6 @@ export default function App() {
           break;
         }
 
-        case "design-bundle-zip": {
-          const bundleMessage = untypedMessage as DesignBundleZipMessage;
-          const blob = new Blob([bundleMessage.zip], {
-            type: "application/zip",
-          });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = bundleMessage.fileName;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          URL.revokeObjectURL(url);
-          setState((prevState) => ({
-            ...prevState,
-            isExportingDesignBundle: false,
-            designBundleExportError: null,
-            designBundleWarnings: bundleMessage.warnings ?? [],
-          }));
-          break;
-        }
-
-        case "design-bundle-error": {
-          const bundleError = untypedMessage as DesignBundleErrorMessage;
-          setState((prevState) => ({
-            ...prevState,
-            isExportingDesignBundle: false,
-            designBundleExportError: bundleError.error,
-            designBundleWarnings: [],
-          }));
-          break;
-        }
-
         default:
           break;
       }
@@ -249,23 +208,6 @@ export default function App() {
       "*",
     );
   };
-  const handleExportDesignBundle = () => {
-    if (state.isExportingDesignBundle) {
-      return;
-    }
-
-    setState((prevState) => ({
-      ...prevState,
-      isExportingDesignBundle: true,
-      designBundleExportError: null,
-      designBundleWarnings: [],
-    }));
-    parent.postMessage(
-      { pluginMessage: { type: "export-design-bundle" } },
-      "*",
-    );
-  };
-
   const darkMode = isDarkFigmaBackground(figmaColorBgValue);
 
   useEffect(() => {
@@ -294,10 +236,6 @@ export default function App() {
         onDownloadProject={handleDownloadProject}
         isDownloadingProject={state.isDownloadingProject}
         projectDownloadError={state.projectDownloadError}
-        onExportDesignBundle={handleExportDesignBundle}
-        isExportingDesignBundle={state.isExportingDesignBundle}
-        designBundleExportError={state.designBundleExportError}
-        designBundleWarnings={state.designBundleWarnings}
       />
     </div>
   );

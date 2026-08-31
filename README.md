@@ -37,9 +37,6 @@ The generator is deterministic and runs inside Figma's plugin sandbox. It does n
 | Tailwind CSS  | HTML, React (JSX), Twig; supports Tailwind 3 and Tailwind 4 |
 | Flutter       | Full app, stateless widget, or snippet                      |
 | SwiftUI       | Preview, `View` struct, or snippet                          |
-| Design Bundle | JSON manifest + exported assets, zipped (see below)         |
-
-Design Bundle is different from the other four rows: it isn't finished code, it's a target-neutral snapshot of the selection's layout, styling, and content for another tool to read. See [Design Bundle export](#design-bundle-export) below.
 
 The plugin can also package generated code and local image assets into downloadable starters:
 
@@ -48,17 +45,6 @@ The plugin can also package generated code and local image assets into downloada
 - SwiftUI: source, asset catalog, and setup instructions
 
 These exports are deliberately small and dependency-light. They are starting points, not generated production applications.
-
-## Design Bundle export
-
-Alongside the four code targets above, the plugin can export the same normalized node tree as a **Design Bundle** instead of code: a `design-bundle.json` manifest plus an `assets/` folder of exported raster and vector images, packaged as a zip. It's meant to be consumed by another tool, not pasted into an application directly — think of it as the "Normalize" stage of [How conversion works](#how-conversion-works) written to disk, before any framework-specific "Generate" step runs.
-
-A couple of things make it different from the other four targets:
-
-- **Multiple top-level layers in one export.** Where the code targets work from a single converted selection, a Design Bundle turns each top-level layer in your selection into its own named entry in the bundle's `designs` array — useful for exporting several distinct sections or pages in one pass.
-- **No code-specific tuning.** None of the "What you can tune" options below apply; the bundle carries the resolved layout and style data itself, and leaves interpreting it (as CMS content blocks, a design system, or anything else) up to whatever reads the bundle.
-
-Export a bundle from the toolbar button next to the framework tabs. The bundle's shape is documented via TSDoc comments on the `DesignBundle*` types in [`packages/types/src/types.ts`](packages/types/src/types.ts) — start there for field-level detail.
 
 ## What you can tune
 
@@ -177,7 +163,6 @@ pnpm format:check   # Check formatting without writing
 | Path                                | Purpose                                                                                                     |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `packages/backend`                  | Figma node processing, intermediate representation, code generators, and project exports                    |
-| `packages/backend/src/designBundle` | Design Bundle export — serializes the normalized node tree to `design-bundle.json` + assets instead of code |
 | `packages/plugin-ui`                | Shared React interface used by the plugin and interactive website demo                                      |
 | `packages/types`                    | Shared settings, message, preview, and output types                                                         |
 | `packages/tsconfig`                 | Shared TypeScript configuration                                                                             |

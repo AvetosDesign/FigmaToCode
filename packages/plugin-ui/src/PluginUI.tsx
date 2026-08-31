@@ -21,7 +21,7 @@ import {
 } from "./codegenPreferenceOptions";
 import Loading from "./components/Loading";
 import { useEffect, useState } from "react";
-import { InfoIcon, PackageOpen, LoaderCircle } from "lucide-react";
+import { InfoIcon } from "lucide-react";
 import React from "react";
 import { Button } from "./components/ui/button";
 import { ScrollArea } from "./components/ui/scroll-area";
@@ -44,10 +44,6 @@ type PluginUIProps = {
   onDownloadProject?: (format: DownloadProjectFormat) => void;
   isDownloadingProject?: boolean;
   projectDownloadError?: string | null;
-  onExportDesignBundle?: () => void;
-  isExportingDesignBundle?: boolean;
-  designBundleExportError?: string | null;
-  designBundleWarnings?: Warning[];
 };
 
 // Phase 9 (D115): "WordPress" added as a fifth tab, peer to the code-
@@ -160,28 +156,6 @@ export const PluginUI = (props: PluginUIProps) => {
               showAbout={showAbout}
               setShowAbout={setShowAbout}
             />
-            {props.onExportDesignBundle && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-md bg-neutral-100 text-neutral-800 shadow-sm ring-1 ring-neutral-200 transition-colors duration-300 ease-[cubic-bezier(0.165,0.85,0.45,1)] hover:bg-neutral-200 hover:text-neutral-950 dark:bg-neutral-800/90 dark:text-neutral-200 dark:ring-white/10 dark:hover:bg-neutral-600 dark:hover:text-white dark:hover:ring-white/20"
-                aria-label="Export Design Bundle"
-                title="Export Design Bundle (design-bundle.json + assets)"
-                onClick={props.onExportDesignBundle}
-                disabled={props.isExportingDesignBundle}
-              >
-                {props.isExportingDesignBundle ? (
-                  <span
-                    className="inline-flex animate-spin motion-reduce:animate-none"
-                    aria-hidden="true"
-                  >
-                    <LoaderCircle className="h-4 w-4" />
-                  </span>
-                ) : (
-                  <PackageOpen className="h-4 w-4" />
-                )}
-              </Button>
-            )}
             <Button
               variant="ghost"
               size="icon"
@@ -200,20 +174,6 @@ export const PluginUI = (props: PluginUIProps) => {
             </Button>
           </div>
         </div>
-        {(props.designBundleExportError ||
-          (props.designBundleWarnings?.length ?? 0) > 0) && (
-          <div className="flex flex-col gap-2 px-2 pt-1.5 dark:bg-card">
-            {props.designBundleExportError && (
-              <p className="text-sm text-destructive" role="alert">
-                {props.designBundleExportError}
-              </p>
-            )}
-            {props.designBundleWarnings &&
-              props.designBundleWarnings.length > 0 && (
-                <WarningsPanel warnings={props.designBundleWarnings} />
-              )}
-          </div>
-        )}
         <div
           style={{
             height: 1,

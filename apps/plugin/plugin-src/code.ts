@@ -9,7 +9,6 @@ import {
   generateProjectZip,
   postSettingsChanged,
   replaceProjectImagePlaceholders,
-  buildDesignBundle,
 } from "backend";
 import { nodesToJSON } from "backend/src/altNodes/jsonNodeConversion";
 import { oldConvertNodesToAltNodes } from "backend/src/altNodes/oldAltConversion";
@@ -101,7 +100,6 @@ const initSettings = async () => {
 let isLoading = false;
 let isDownloadingProject = false;
 let rerunAfterDownload = false;
-let isExportingDesignBundle = false;
 const safeRun = async (settings: PluginSettings) => {
   console.log(
     "[DEBUG] safeRun - Called with isLoading =",
@@ -466,42 +464,6 @@ const standardMode = async () => {
           rerunAfterDownload = false;
           void safeRun(userPluginSettings);
         }
-      }
-    } else if (msg.type === "export-design-bundle") {
-      if (isExportingDesignBundle) {
-        figma.ui.postMessage({
-          type: "design-bundle-error",
-          error: "A design bundle export is already in progress.",
-        });
-        return;
-      }
-
-      const selection = [...figma.currentPage.selection];
-      isExportingDesignBundle = true;
-      try {
-        const result = await buildDesignBundle(selection, userPluginSettings);
-        const zip = result.zip.buffer.slice(
-          result.zip.byteOffset,
-          result.zip.byteOffset + result.zip.byteLength,
-        );
-        figma.ui.postMessage({
-          type: "design-bundle-zip",
-          zip,
-          fileName: result.fileName,
-          designCount: result.designCount,
-          assetCount: result.assetCount,
-          warnings: result.warnings,
-        });
-      } catch (error) {
-        console.error("Design bundle export failed:", error);
-        figma.ui.postMessage({
-          type: "design-bundle-error",
-          error: `Failed to create design bundle: ${
-            error instanceof Error ? error.message : "Unknown error occurred"
-          }`,
-        });
-      } finally {
-        isExportingDesignBundle = false;
       }
     } else if (msg.type === "pluginSettingWillChange") {
       const { key, value } = msg as SettingWillChangeMessage<unknown>;

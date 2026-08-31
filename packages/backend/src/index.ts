@@ -10,4 +10,3 @@ export {
 } from "./zipGenerator";
 export { run } from "./code";
 export * from "./messaging";
-export { buildDesignBundle } from "./designBundle/designBundleMain";
