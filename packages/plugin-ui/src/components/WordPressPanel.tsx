@@ -1,24 +1,26 @@
 import { Download, LoaderCircle } from "lucide-react";
-import { WordPressGenerationSummary, WordPressOutputMode, Warning } from "types";
+import {
+  WordPressGenerationSummary,
+  WordPressOutputMode,
+  Warning,
+} from "types";
 import { Button } from "./ui/button";
 import WarningsPanel from "./WarningsPanel";
 import FormField from "./CustomPrefixInput";
 
 /**
- * Phase 9 (D115/D118, wired up per D122-D125): the WordPress tab's own
- * download control and feedback panel. Split out of CodePanel.tsx into
- * their own small file since neither one is a syntax-highlighted-code
- * concern the way the rest of that file is.
+ * The WordPress tab's own download control and feedback panel. Split out
+ * of CodePanel.tsx into their own small file since neither one is a
+ * syntax-highlighted-code concern the way the rest of that file is.
  *
  * Both outputs are real now: "WP Theme" (`outputMode === "theme"`, see
- * `generateWordPressTheme.ts`) since D123, "Design Bundle" (see
- * `generateDesignBundleZip.ts`) since D125 -- both go through
- * code.ts's shared `downloadWordPressOutput`. Follows the same
- * single-icon, no-popover visual pattern DownloadMenu.tsx already uses
- * for Flutter/SwiftUI -- kept as its own component rather than
- * extending DownloadMenu's props, since DownloadMenu's whole job is
- * resolving a `DownloadProjectFormat`, a type neither WordPress output
- * produces.
+ * `generateWordPressTheme.ts`) and "Design Bundle" (see
+ * `generateDesignBundleZip.ts`) -- both go through code.ts's shared
+ * `downloadWordPressOutput`. Follows the same single-icon, no-popover
+ * visual pattern DownloadMenu.tsx already uses for Flutter/SwiftUI --
+ * kept as its own component rather than extending DownloadMenu's props,
+ * since DownloadMenu's whole job is resolving a `DownloadProjectFormat`,
+ * a type neither WordPress output produces.
  */
 
 const outputLabel: Record<WordPressOutputMode, string> = {
@@ -26,8 +28,8 @@ const outputLabel: Record<WordPressOutputMode, string> = {
   designBundle: "Design Bundle",
 };
 
-// Phase 9 tweak: one shared text setting (code.ts's
-// userPluginSettings.wpThemeName) behind two labels/help texts, since
+// One shared text setting (code.ts's userPluginSettings.wpThemeName)
+// behind two labels/help texts, since
 // "Theme Name" doesn't read right once the selected output is a raw
 // Design Bundle download rather than an installable WP theme.
 const themeNameFieldLabel: Record<WordPressOutputMode, string> = {
@@ -37,7 +39,7 @@ const themeNameFieldLabel: Record<WordPressOutputMode, string> = {
 
 const themeNameFieldHelp: Record<WordPressOutputMode, string> = {
   theme:
-    'Used as the "Theme Name:" header in the generated theme\'s style.css and as the downloaded file\'s name. Defaults to the loaded Figma file\'s name.',
+    "Used as the \"Theme Name:\" header in the generated theme's style.css and as the downloaded file's name. Defaults to the loaded Figma file's name.",
   designBundle:
     "Used as the downloaded zip's file name. Defaults to the loaded Figma file's name.",
 };
@@ -48,8 +50,8 @@ const themeNameFieldPlaceholder: Record<WordPressOutputMode, string> = {
 };
 
 /**
- * Phase 9 tweak: the "Theme Name" text field CodePanel.tsx renders
- * adjacent to the "Include Fonts" checkbox in the WordPress tab's
+ * The "Theme Name" text field CodePanel.tsx renders adjacent to the
+ * "Include Fonts" checkbox in the WordPress tab's
  * "Download Options" group. Kept here rather than added to
  * codegenPreferenceOptions.ts's generic preference list because that
  * mechanism only models checkboxes (`individual_select`) and button-group
@@ -128,7 +130,10 @@ export const WordPressDownloadButton = ({
 
 const fontsSummary = (summary: WordPressGenerationSummary): string | null => {
   const { resolvedFontFamilies, unresolvedFontFamilies } = summary;
-  if (resolvedFontFamilies.length === 0 && unresolvedFontFamilies.length === 0) {
+  if (
+    resolvedFontFamilies.length === 0 &&
+    unresolvedFontFamilies.length === 0
+  ) {
     return null;
   }
 
@@ -137,7 +142,9 @@ const fontsSummary = (summary: WordPressGenerationSummary): string | null => {
     parts.push(`self-hosted ${resolvedFontFamilies.join(", ")}`);
   }
   if (unresolvedFontFamilies.length > 0) {
-    parts.push(`fell back to a generic font for ${unresolvedFontFamilies.join(", ")}`);
+    parts.push(
+      `fell back to a generic font for ${unresolvedFontFamilies.join(", ")}`,
+    );
   }
   return parts.join("; ");
 };
@@ -174,9 +181,12 @@ export const WordPressFeedbackPanel = ({
         <p className="font-medium text-foreground">{result.fileName}</p>
         {outputMode === "theme" ? (
           <p>
-            {summary.designCount} {summary.designCount === 1 ? "design" : "designs"},{" "}
-            {summary.patternCount} {summary.patternCount === 1 ? "pattern" : "patterns"}, and{" "}
-            {summary.assetCount} {summary.assetCount === 1 ? "asset" : "assets"} exported.
+            {summary.designCount}{" "}
+            {summary.designCount === 1 ? "design" : "designs"},{" "}
+            {summary.patternCount}{" "}
+            {summary.patternCount === 1 ? "pattern" : "patterns"}, and{" "}
+            {summary.assetCount} {summary.assetCount === 1 ? "asset" : "assets"}{" "}
+            exported.
             {(() => {
               const fonts = fontsSummary(summary);
               return fonts ? ` ${fonts}.` : "";
@@ -184,9 +194,10 @@ export const WordPressFeedbackPanel = ({
           </p>
         ) : (
           <p>
-            {summary.designCount} {summary.designCount === 1 ? "design" : "designs"} and{" "}
-            {summary.assetCount} {summary.assetCount === 1 ? "asset" : "assets"} exported to{" "}
-            <code>design-bundle.json</code>.
+            {summary.designCount}{" "}
+            {summary.designCount === 1 ? "design" : "designs"} and{" "}
+            {summary.assetCount} {summary.assetCount === 1 ? "asset" : "assets"}{" "}
+            exported to <code>design-bundle.json</code>.
           </p>
         )}
         {result.warnings.length > 0 && (

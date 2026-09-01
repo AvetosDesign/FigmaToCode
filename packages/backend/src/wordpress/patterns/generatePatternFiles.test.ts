@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { generatePatternFiles } from "./generatePatternFiles.ts";
-import { createInMemorySink } from "../core/outputSink.ts";
-import type { DesignBundle } from "../core/types/designBundle.ts";
+import { generatePatternFiles } from "./generatePatternFiles";
+import { createInMemorySink } from "../core/outputSink";
+import { DesignBundle } from "../core/types/designBundle";
 
 // F2C port: see theme/generateThemeFiles.test.ts's own doc comment for why
 // this fork drops the CLI original's disk-vs-memory parity test (no disk
@@ -54,7 +54,16 @@ const bundleWithImage = (): DesignBundle => ({
       } as never,
     },
   ],
-  assets: [{ id: "asset-1", figmaNodeId: "1:2", fileName: "assets/hero.png", kind: "raster", width: 10, height: 10 }],
+  assets: [
+    {
+      id: "asset-1",
+      figmaNodeId: "1:2",
+      fileName: "assets/hero.png",
+      kind: "raster",
+      width: 10,
+      height: 10,
+    },
+  ],
   styles: { colors: {}, textStyles: {} },
 });
 
@@ -64,7 +73,12 @@ describe("generatePatternFiles -- F2C in-memory generation", () => {
     const assets = { "assets/hero.png": new Uint8Array([1, 2, 3, 4]) };
     const memSink = createInMemorySink();
 
-    const result = generatePatternFiles(bundle, assets, memSink, "/custom/asset/path");
+    const result = generatePatternFiles(
+      bundle,
+      assets,
+      memSink,
+      "/custom/asset/path",
+    );
 
     expect(result.patternSlugs.length).toBe(1);
     expect(Object.keys(memSink.files)).toContain("assets/hero.png");

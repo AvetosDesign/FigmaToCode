@@ -33,18 +33,12 @@ interface AppState {
   warnings: Warning[];
   isDownloadingProject: boolean;
   projectDownloadError: string | null;
-  // Set by the "empty"/"code" backend messages -- see PluginUI's
-  // isEmptySelection prop for why this can't be derived from `code`.
+  // Set by the "empty"/"code" backend messages (see XC10)
   isEmptySelection: boolean;
-  // Phase 9 (D122 follow-up): the WordPress tab's own "WP Theme" download
-  // -- kept separate from isDownloadingProject/projectDownloadError above
-  // since it's a visually distinct button (WordPressPanel's
-  // WordPressDownloadButton, not DownloadMenu) even though the plugin
-  // sandbox side shares one busy-flag between both (see code.ts).
+  // The WordPress tab's own "WP Theme" download flag (see XC11)
   isDownloadingWordPress: boolean;
   wordPressDownloadError: string | null;
-  // Summary from the most recent successful WP Theme generation, shown in
-  // the WordPress tab's feedback panel until the next attempt starts.
+  // Last successful WP Theme generation summary (see XC12)
   wordPressResult: {
     outputMode: WordPressOutputMode;
     fileName: string;

@@ -1,5 +1,5 @@
-import type { GeneratedBlock } from "./types.ts";
-import type { MapNodeContext } from "./mapNode.ts";
+import { GeneratedBlock } from "./types";
+import { MapNodeContext } from "./mapNode";
 import {
   escapeHtml,
   layoutToDeclarations,
@@ -8,24 +8,28 @@ import {
   joinStyles,
   fontFamilyDeclaration,
   withAlpha,
-} from "../core/style/styleHelpers.ts";
-import { nodeClassFor } from "../core/style/nodeClass.ts";
-import { addRule, addPositionRule } from "../core/style/stylesheet.ts";
-import { toSlug } from "../core/slugify.ts";
-import type { DesignNode } from "../core/types/designBundle";
-import type { DetectedField, DetectedButton, DetectedForm } from "../core/classify/formDetect.ts";
+} from "../core/style/styleHelpers";
+import { nodeClassFor } from "../core/style/nodeClass";
+import { addRule, addPositionRule } from "../core/style/stylesheet";
+import { toSlug } from "../core/slugify";
+import { DesignNode } from "../core/types/designBundle";
+import {
+  DetectedField,
+  DetectedButton,
+  DetectedForm,
+} from "../core/classify/formDetect";
 
 /**
- * D62 — Forms and in-form buttons: rendering half. Takes the target-neutral
+ * Forms and in-form buttons: rendering half. Takes the target-neutral
  * `DetectedForm` shape produced by `core/classify/formDetect.ts`'s
  * `detectForm` and renders real `<form>`/`<label>`/`<input>`/`<textarea>`/
  * `<button>` markup instead of generic nested `core/group`/`core/paragraph`
- * blocks. See that file for the detection half and the full D62 rationale;
- * see ClaudeFiles/06-block-mapping.md's "Forms and in-form buttons" section
+ * blocks. See that file for the detection half; see
+ * ClaudeFiles/06-block-mapping.md's "Forms and in-form buttons" section
  * for the full spec.
  */
 
-// Sean's starter dictionaries (D62) — thin, case-insensitive keyword match,
+// Starter dictionaries — thin, case-insensitive keyword match,
 // first match wins, unmatched falls through to the safe default. Kept as
 // plain data so they're easy to extend later without touching the
 // rendering logic around them.
@@ -35,7 +39,8 @@ const FIELD_TYPE_KEYWORDS: ReadonlyArray<readonly [RegExp, string]> = [
   [/url|website/i, "url"],
   [/date/i, "date"],
 ];
-const isTextareaField = (fieldName: string): boolean => /message/i.test(fieldName);
+const isTextareaField = (fieldName: string): boolean =>
+  /message/i.test(fieldName);
 const inputTypeFor = (fieldName: string): string => {
   for (const [pattern, type] of FIELD_TYPE_KEYWORDS) {
     if (pattern.test(fieldName)) return type;
@@ -61,14 +66,14 @@ const slugifyFieldName = (fieldName: string): string =>
   toSlug(fieldName.replace(/([a-z0-9])([A-Z])/g, "$1-$2"));
 
 // Generated CSS class for a node's own layout/fill/border box, same
-// zero-attrs-footprint mechanism the rest of the mapper uses (D27) — just
+// zero-attrs-footprint mechanism the rest of the mapper uses — just
 // applied to a semantic tag (<form>/<div>/<input>/<button>) instead of a
 // core/group's <div>.
 //
-// D64 (real-WordPress finding): `box-sizing: border-box` unconditionally,
-// same "force it rather than chase individual cases" pattern as D54's
-// unconditional `margin: 0`. Confirmed root cause of Sean's real-install
-// report ("fields overflowing their bounding box to the right," eating
+// `box-sizing: border-box` unconditionally, same "force it rather than
+// chase individual cases" pattern as this project's unconditional
+// `margin: 0` elsewhere. Confirmed root cause of a real-install report
+// ("fields overflowing their bounding box to the right," eating
 // the gap between First/Last name and pushing the Submit button's right
 // edge past its own box): Figma's Field frame captures `sizing.width:
 // "fill"` (-> `width: 100%`) *and* real padding/border (16px/12px padding,
@@ -80,7 +85,11 @@ const slugifyFieldName = (fieldName: string): string =>
 // system via core/html get none of it) — this is the first place in the
 // pipeline that combines an explicit fill/percentage width with nonzero
 // padding+border on the very same rendered element.
-const boxClass = (node: DesignNode, ctx: MapNodeContext, extra?: string): string | undefined => {
+const boxClass = (
+  node: DesignNode,
+  ctx: MapNodeContext,
+  extra?: string,
+): string | undefined => {
   const declarations = joinStyles(
     "box-sizing: border-box",
     layoutToDeclarations(node.layout),
@@ -88,14 +97,18 @@ const boxClass = (node: DesignNode, ctx: MapNodeContext, extra?: string): string
     extra,
   );
   const nodeClass = nodeClassFor(node.id);
-  // D127 (Phase A/B): "form" is the dedup kind for every generated class
-  // this file produces (wrappers, fields, buttons, labels alike) — one
-  // kind covers the whole form-rendering path, since it's all "form
-  // furniture" in Sean's "same nature" sense, distinct from a plain
+  // "form" is the dedup kind for every generated class this file
+  // produces (wrappers, fields, buttons, labels alike) — one kind covers
+  // the whole form-rendering path, since it's all "form furniture" in the
+  // same "same nature" sense, distinct from a plain
   // container/paragraph/image/link. Position (when present) still gets
   // its own always-per-node rule, same as everywhere else.
   const lookClass = addRule(ctx.stylesheet, "form", nodeClass, declarations);
-  const positionClass = addPositionRule(ctx.stylesheet, `${nodeClass}-pos`, layoutPositionToDeclarations(node.layout, node.paintOrder));
+  const positionClass = addPositionRule(
+    ctx.stylesheet,
+    `${nodeClass}-pos`,
+    layoutPositionToDeclarations(node.layout, node.paintOrder),
+  );
   return [lookClass, positionClass].filter(Boolean).join(" ") || undefined;
 };
 
@@ -111,7 +124,9 @@ const captionDeclarations = (node: DesignNode): string | undefined => {
     `font-size: ${first.fontSize}px`,
     `font-weight: ${first.fontWeight}`,
     first.lineHeight ? `line-height: ${first.lineHeight}` : undefined,
-    first.fillHex ? `color: ${withAlpha(first.fillHex, first.fillOpacity)}` : undefined,
+    first.fillHex
+      ? `color: ${withAlpha(first.fillHex, first.fillOpacity)}`
+      : undefined,
   );
 };
 
@@ -121,13 +136,21 @@ const captionText = (node: DesignNode): string =>
 const attr = (name: string, value: string | undefined): string =>
   value === undefined ? "" : ` ${name}="${escapeHtml(value)}"`;
 
-const renderField = (formSlug: string, detected: DetectedField, ctx: MapNodeContext): string => {
+const renderField = (
+  formSlug: string,
+  detected: DetectedField,
+  ctx: MapNodeContext,
+): string => {
   const fieldSlug = slugifyFieldName(detected.fieldName);
   const id = `${formSlug}-${fieldSlug}`;
   const labelText = captionText(detected.label);
   const valueText = captionText(detected.valueNode);
   const wrapperClass = boxClass(detected.input, ctx);
-  const fieldClass = boxClass(detected.field, ctx, captionDeclarations(detected.valueNode));
+  const fieldClass = boxClass(
+    detected.field,
+    ctx,
+    captionDeclarations(detected.valueNode),
+  );
   const labelClass = (() => {
     const decl = captionDeclarations(detected.label);
     if (!decl) return undefined;
@@ -135,7 +158,9 @@ const renderField = (formSlug: string, detected: DetectedField, ctx: MapNodeCont
     return addRule(ctx.stylesheet, "form", cls, decl);
   })();
 
-  const valueAttr = detected.isValue ? attr("value", valueText) : attr("placeholder", valueText);
+  const valueAttr = detected.isValue
+    ? attr("value", valueText)
+    : attr("placeholder", valueText);
 
   const controlHtml = isTextareaField(detected.fieldName)
     ? `<textarea id="${id}" name="${fieldSlug}" rows="4"${attr("class", fieldClass)}${valueAttr}>${detected.isValue ? valueText : ""}</textarea>`
@@ -149,25 +174,41 @@ const renderField = (formSlug: string, detected: DetectedField, ctx: MapNodeCont
   );
 };
 
-const renderButton = (detected: DetectedButton, ctx: MapNodeContext): string => {
+const renderButton = (
+  detected: DetectedButton,
+  ctx: MapNodeContext,
+): string => {
   const labelText = captionText(detected.label);
-  const buttonClass = boxClass(detected.button, ctx, captionDeclarations(detected.label));
+  const buttonClass = boxClass(
+    detected.button,
+    ctx,
+    captionDeclarations(detected.label),
+  );
   return `<button type="${buttonTypeFor(detected.buttonType)}"${attr("class", buttonClass)}>${labelText}</button>`;
 };
 
 /**
- * Renders a detected Form as a single `core/html` block (D25's already-
- * settled rendering target — Gutenberg's native `core/form-*` blocks are
- * still new/experimental depending on WP version). No `action`/`method` on
- * the `<form>` element — actual submission wiring stays manual,
- * WordPress-developer-side work, unchanged from D14/D25.
+ * Renders a detected Form as a single `core/html` block (a deliberate,
+ * already-settled rendering target — Gutenberg's native `core/form-*`
+ * blocks are still new/experimental depending on WP version). No
+ * `action`/`method` on the `<form>` element — actual submission wiring
+ * stays manual, WordPress-developer-side work.
  */
-export const renderForm = (detected: DetectedForm, ctx: MapNodeContext): GeneratedBlock => {
-  const formSlug = toSlug(detected.form.uniqueName.replace(/^Form\s*\/\s*/i, ""));
+export const renderForm = (
+  detected: DetectedForm,
+  ctx: MapNodeContext,
+): GeneratedBlock => {
+  const formSlug = toSlug(
+    detected.form.uniqueName.replace(/^Form\s*\/\s*/i, ""),
+  );
   const formClass = boxClass(detected.form, ctx);
 
-  const fieldsHtml = detected.fields.map((f) => renderField(formSlug, f, ctx)).join("");
-  const buttonsHtml = detected.buttons.map((b) => renderButton(b, ctx)).join("");
+  const fieldsHtml = detected.fields
+    .map((f) => renderField(formSlug, f, ctx))
+    .join("");
+  const buttonsHtml = detected.buttons
+    .map((b) => renderButton(b, ctx))
+    .join("");
 
   return {
     blockName: "core/html",

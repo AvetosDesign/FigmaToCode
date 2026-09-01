@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createInMemorySink } from "./outputSink.ts";
+import { createInMemorySink } from "./outputSink";
 
 // F2C port: only createInMemorySink exists in this fork (see outputSink.ts's
 // doc comment) -- the CLI original's createNodeDiskSink tests are dropped,

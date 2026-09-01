@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { generateThemeFiles } from "./generateThemeFiles.ts";
-import { createInMemorySink } from "../core/outputSink.ts";
-import type { DesignBundle } from "../core/types/designBundle.ts";
+import { generateThemeFiles } from "./generateThemeFiles";
+import { createInMemorySink } from "../core/outputSink";
+import { DesignBundle } from "../core/types/designBundle";
 
 /**
  * F2C port: the CLI original (`theme-creator-for-figma`) pairs this with a
  * disk-vs-memory parity test proving createInMemorySink and
- * createNodeDiskSink produce byte-identical output -- that's D117's own
- * verification for the OutputSink abstraction itself, already proven
+ * createNodeDiskSink produce byte-identical output -- that's the CLI's
+ * own verification for the OutputSink abstraction itself, already proven
  * there. This fork has no disk sink to compare against (see
  * `core/outputSink.ts`'s doc comment), so only the in-memory-specific
  * behavior test below is ported.
@@ -64,7 +64,16 @@ const bundleWithImage = (): DesignBundle => ({
       } as never,
     },
   ],
-  assets: [{ id: "asset-1", figmaNodeId: "1:2", fileName: "assets/hero.png", kind: "raster", width: 10, height: 10 }],
+  assets: [
+    {
+      id: "asset-1",
+      figmaNodeId: "1:2",
+      fileName: "assets/hero.png",
+      kind: "raster",
+      width: 10,
+      height: 10,
+    },
+  ],
   styles: { colors: {}, textStyles: {} },
 });
 
@@ -72,7 +81,10 @@ describe("generateThemeFiles -- F2C in-memory generation", () => {
   it("in-memory sink always produces a fresh {major}.{minor}.0 version -- no 'previous run' to bump against", async () => {
     const bundle = bundleWithImage();
     const memSink = createInMemorySink();
-    await generateThemeFiles(bundle, {}, memSink, undefined, { downloadFonts: false, cliVersion: "2.5.9" });
+    await generateThemeFiles(bundle, {}, memSink, undefined, {
+      downloadFonts: false,
+      cliVersion: "2.5.9",
+    });
     const styleCss = new TextDecoder().decode(memSink.files["style.css"]);
     expect(styleCss).toMatch(/^Version:\s*2\.5\.0\s*$/m);
   });
@@ -81,10 +93,16 @@ describe("generateThemeFiles -- F2C in-memory generation", () => {
     const bundle = bundleWithImage();
     const assets = { "assets/hero.png": new Uint8Array([1, 2, 3, 4]) };
     const memSink = createInMemorySink();
-    const result = await generateThemeFiles(bundle, assets, memSink, undefined, {
-      downloadFonts: false,
-      cliVersion: "1.2.3",
-    });
+    const result = await generateThemeFiles(
+      bundle,
+      assets,
+      memSink,
+      undefined,
+      {
+        downloadFonts: false,
+        cliVersion: "1.2.3",
+      },
+    );
 
     expect(Object.keys(memSink.files)).toContain("style.css");
     expect(Object.keys(memSink.files)).toContain("theme.json");

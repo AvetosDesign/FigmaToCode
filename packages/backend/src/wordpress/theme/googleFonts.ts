@@ -1,8 +1,8 @@
-import type { DesignBundle, DesignNode } from "../core/types/designBundle";
+import { DesignBundle, DesignNode } from "../core/types/designBundle";
 
 /**
- * D38: self-hosting Google Fonts, decided over linking Google's CDN
- * directly at page-view time (Sean's call) — a self-hosted theme has no
+ * Self-hosting Google Fonts, decided over linking Google's CDN directly
+ * at page-view time — a self-hosted theme has no
  * runtime dependency on a third party staying up, and sidesteps a real
  * legal wrinkle some jurisdictions have flagged: a German court (LG
  * München I, 2022) held that loading fonts from Google's CDN without
@@ -66,13 +66,15 @@ export const normalizeFontWeight = (fontWeight: string): string => {
  * normalized fontWeight) pair actually used — matches exactly what
  * `mapNode.ts`'s `mapText` reads (`first.fontFamily`/`first.fontWeight`,
  * the first text segment only, same "first run only" limitation as
- * heading detection, D23) so this only ever fetches fonts the mapper will
+ * heading detection) so this only ever fetches fonts the mapper will
  * actually reference in the generated CSS. Doesn't distinguish header/
  * footer from regular content — irrelevant here, this runs before that
  * split and a font family used anywhere in the bundle needs to load
  * regardless of which template/part ends up using it.
  */
-export const collectFontRequests = (bundle: DesignBundle): Map<string, Set<string>> => {
+export const collectFontRequests = (
+  bundle: DesignBundle,
+): Map<string, Set<string>> => {
   const requests = new Map<string, Set<string>>();
 
   const visit = (node: DesignNode): void => {
@@ -116,8 +118,7 @@ export const slugifyFontFamily = (family: string): string =>
  * rules — exported separately from `resolveGoogleFonts` so it can be unit
  * tested against a captured real response without a live network call
  * (this sandbox's network egress is proxy-restricted and can't reach
- * Google Fonts at all — see D38's verification note in the decisions
- * log). Only ever extracts the `format('woff2')` `src` from a rule, per
+ * Google Fonts at all). Only ever extracts the `format('woff2')` `src` from a rule, per
  * this module's UA choice above — a response could in principle include
  * multiple `src` fallbacks for different formats, though a modern-UA
  * request in practice returns exactly one woff2 `src` per rule.
@@ -137,16 +138,33 @@ export const slugifyFontFamily = (family: string): string =>
  */
 export const parseFontFaceRules = (
   css: string,
-): Array<{ family: string; weight: string; style: string; unicodeRange?: string; srcUrl: string }> => {
-  const rules: Array<{ family: string; weight: string; style: string; unicodeRange?: string; srcUrl: string }> = [];
+): Array<{
+  family: string;
+  weight: string;
+  style: string;
+  unicodeRange?: string;
+  srcUrl: string;
+}> => {
+  const rules: Array<{
+    family: string;
+    weight: string;
+    style: string;
+    unicodeRange?: string;
+    srcUrl: string;
+  }> = [];
   for (const match of css.matchAll(/@font-face\s*{([^}]*)}/g)) {
     const block = match[1];
-    const family = /font-family:\s*['"]?([^;'"]+)['"]?/.exec(block)?.[1]?.trim();
+    const family = /font-family:\s*['"]?([^;'"]+)['"]?/
+      .exec(block)?.[1]
+      ?.trim();
     const weight = /font-weight:\s*(\d+)/.exec(block)?.[1] ?? "400";
     const style = /font-style:\s*(\w+)/.exec(block)?.[1] ?? "normal";
     const unicodeRange = /unicode-range:\s*([^;]+);/.exec(block)?.[1]?.trim();
-    const srcUrl = /src:\s*url\(([^)]+)\)\s*format\(['"]woff2['"]\)/.exec(block)?.[1]?.trim();
-    if (family && srcUrl) rules.push({ family, weight, style, unicodeRange, srcUrl });
+    const srcUrl = /src:\s*url\(([^)]+)\)\s*format\(['"]woff2['"]\)/
+      .exec(block)?.[1]
+      ?.trim();
+    if (family && srcUrl)
+      rules.push({ family, weight, style, unicodeRange, srcUrl });
   }
   return rules;
 };
@@ -156,8 +174,8 @@ export const parseFontFaceRules = (
  * combination from Google Fonts. A family Google Fonts doesn't recognize
  * (a custom/commercial font, a typo, or just not on Google Fonts at all)
  * fails gracefully — reported in `unresolvedFamilies`, never thrown; the
- * caller (`generateThemeFiles.ts`) already has a fallback for exactly
- * this case (D37's generic-family CSS fallback), so a font that can't be
+ * caller (`generateThemeFiles.ts`) already has a generic-family CSS
+ * fallback for exactly this case, so a font that can't be
  * resolved here just renders with that instead of failing the whole
  * generation run. Same posture for a network failure (offline machine,
  * DNS issue, Google Fonts unreachable) — `warn` gets a message, the
@@ -177,23 +195,31 @@ export const resolveGoogleFonts = async (
     let css: string;
     try {
       const url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weights.join(";")}&display=swap`;
-      const res = await fetchImpl(url, { headers: { "User-Agent": MODERN_UA } });
+      const res = await fetchImpl(url, {
+        headers: { "User-Agent": MODERN_UA },
+      });
       if (!res.ok) {
         unresolvedFamilies.push(family);
-        warn(`Font "${family}" not found on Google Fonts (HTTP ${res.status}) — falling back to a generic CSS font-family (D37).`);
+        warn(
+          `Font "${family}" not found on Google Fonts (HTTP ${res.status}) — falling back to a generic CSS font-family.`,
+        );
         continue;
       }
       css = await res.text();
     } catch (error) {
       unresolvedFamilies.push(family);
-      warn(`Could not reach Google Fonts for "${family}" (${(error as Error).message}) — falling back to a generic CSS font-family (D37).`);
+      warn(
+        `Could not reach Google Fonts for "${family}" (${(error as Error).message}) — falling back to a generic CSS font-family.`,
+      );
       continue;
     }
 
     const parsed = parseFontFaceRules(css);
     if (parsed.length === 0) {
       unresolvedFamilies.push(family);
-      warn(`Google Fonts returned no usable (woff2) @font-face rules for "${family}" — falling back to a generic CSS font-family (D37).`);
+      warn(
+        `Google Fonts returned no usable (woff2) @font-face rules for "${family}" — falling back to a generic CSS font-family.`,
+      );
       continue;
     }
 
@@ -206,16 +232,27 @@ export const resolveGoogleFonts = async (
       try {
         const fileRes = await fetchImpl(rule.srcUrl);
         if (!fileRes.ok) {
-          warn(`Font file download failed for "${family}" weight ${rule.weight} (HTTP ${fileRes.status}).`);
+          warn(
+            `Font file download failed for "${family}" weight ${rule.weight} (HTTP ${fileRes.status}).`,
+          );
           continue;
         }
         const bytes = new Uint8Array(await fileRes.arrayBuffer());
         const fileName = `${slugifyFontFamily(family)}-${rule.weight}-${rule.style}-${subsetIndex}.woff2`;
         subsetIndex += 1;
-        faces.push({ family, weight: rule.weight, style: rule.style, unicodeRange: rule.unicodeRange, fileName, bytes });
+        faces.push({
+          family,
+          weight: rule.weight,
+          style: rule.style,
+          unicodeRange: rule.unicodeRange,
+          fileName,
+          bytes,
+        });
         familyResolved = true;
       } catch (error) {
-        warn(`Font file download failed for "${family}" weight ${rule.weight} (${(error as Error).message}).`);
+        warn(
+          `Font file download failed for "${family}" weight ${rule.weight} (${(error as Error).message}).`,
+        );
       }
     }
     if (familyResolved) resolvedFamilies.push(family);
@@ -227,11 +264,11 @@ export const resolveGoogleFonts = async (
 
 /**
  * Builds `@font-face` CSS rules referencing the self-hosted files,
- * relative to `style.css`'s own location (the theme root). Unlike D30/
- * D31's image-`src` problem in static `templates/*.html`/`parts/*.html`
- * files (a relative path there resolves against the *current page's* URL,
- * not the theme's, since that markup gets inserted into an arbitrary
- * page), this just works with a plain relative `url()`: `style.css` is
+ * relative to `style.css`'s own location (the theme root). Unlike the
+ * image-`src` problem in static `templates/*.html`/`parts/*.html` files
+ * (a relative path there resolves against the *current page's* URL, not
+ * the theme's, since that markup gets inserted into an arbitrary page),
+ * this just works with a plain relative `url()`: `style.css` is
  * served as its own static file at a fixed, known location, and a CSS
  * `url()` inside a stylesheet always resolves relative to that
  * stylesheet's own URL — no PHP/live-resolution trick needed here.

@@ -215,7 +215,12 @@ export interface DesignBundleTextSegment {
   // fill can be translucent same as any other fill. Omitted when opaque.
   fillOpacity?: number;
 }
-export type DesignNodeType = "FRAME" | "TEXT" | "IMAGE" | "VECTOR" | "RECTANGLE";
+export type DesignNodeType =
+  | "FRAME"
+  | "TEXT"
+  | "IMAGE"
+  | "VECTOR"
+  | "RECTANGLE";
 export interface DesignNode {
   id: string;
   uniqueName: string;
@@ -228,7 +233,10 @@ export interface DesignNode {
   // Omitted entirely — not just set to "LEFT" — when Figma's own value
   // is "LEFT", since that's the CSS default and there's no reason to
   // emit a redundant `text-align: left`.
-  text?: { segments: DesignBundleTextSegment[]; align?: "CENTER" | "RIGHT" | "JUSTIFIED" };
+  text?: {
+    segments: DesignBundleTextSegment[];
+    align?: "CENTER" | "RIGHT" | "JUSTIFIED";
+  };
   assetRef?: string;
   // Figma's main-component id, present when this node was originally an
   // INSTANCE (already available synchronously on the REST API v1 JSON
@@ -305,10 +313,10 @@ export interface DesignBundleAsset {
   // vector (SVG) assets, which have no fixed pixel scale.
   //
   // F2C port note: this field existed in the original F2C source this
-  // schema was mirrored from (packages/types/src/types.ts, pre-D119) but
-  // was missing from the CLI repo's own copy of this schema (a schema
-  // drift discovered while restoring fromSelection/designBundleTree.ts,
-  // which sets this field) -- added here to match the code that actually
+  // schema was mirrored from (packages/types/src/types.ts) but was
+  // missing from the CLI repo's own copy of this schema (a schema drift
+  // discovered while restoring fromSelection/designBundleTree.ts, which
+  // sets this field) -- added here to match the code that actually
   // produces it.
   scale?: number;
 }

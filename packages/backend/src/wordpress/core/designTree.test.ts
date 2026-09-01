@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { classifyNode, walkDesignTree } from "./designTree.ts";
-import type { DesignBundleTextSegment, DesignNode } from "./types/designBundle.ts";
-import type { PublishTarget } from "../targets/target.ts";
+import { classifyNode, walkDesignTree } from "./designTree";
+import { DesignBundleTextSegment, DesignNode } from "./types/designBundle";
+import { PublishTarget } from "../targets/target";
 
 /**
- * D106 — tests for the `core/designTree.ts` module boundary introduced in
- * D102/D103, left uncovered through D102-D105 (see 04-roadmap.md's
- * "Update/add tests for the new `core/*` and `targets/wordpress/*` module
- * boundaries" goal). Covers `classifyNode`'s per-node-type dispatch and
- * precedence (link before heading for TEXT, form before link for FRAME)
- * and `walkDesignTree`'s recursion/classification-threading contract.
+ * Tests for the `core/designTree.ts` module boundary (see
+ * 04-roadmap.md's "Update/add tests for the new `core/*` and
+ * `targets/wordpress/*` module boundaries" goal). Covers `classifyNode`'s
+ * per-node-type dispatch and precedence (link before heading for TEXT,
+ * form before link for FRAME) and `walkDesignTree`'s
+ * recursion/classification-threading contract.
  */
 
 const baseLayout = {
@@ -23,7 +23,9 @@ const baseLayout = {
 
 const baseStyle = { fills: [], strokes: [], cornerRadius: 0, effects: [] };
 
-const segment = (overrides: Partial<DesignBundleTextSegment> = {}): DesignBundleTextSegment => ({
+const segment = (
+  overrides: Partial<DesignBundleTextSegment> = {},
+): DesignBundleTextSegment => ({
   uniqueId: "seg-1",
   characters: "Hello",
   fontFamily: "Inter",
@@ -70,8 +72,11 @@ const imageNode = (overrides: Partial<DesignNode> = {}): DesignNode => ({
 const noopWarn = (): void => {};
 
 describe("classifyNode", () => {
-  it("TEXT: a bare 'Link / {page}' node returns detectedLink, not a heading level (D73 before D23)", () => {
-    const node = textNode({ uniqueName: "Link / Home", text: { segments: [segment({ fontSize: 40 })] } });
+  it("TEXT: a bare 'Link / {page}' node returns detectedLink, not a heading level (link convention checked before heading)", () => {
+    const node = textNode({
+      uniqueName: "Link / Home",
+      text: { segments: [segment({ fontSize: 40 })] },
+    });
     const result = classifyNode(node, {}, noopWarn);
     expect(result.detectedLink).toBeDefined();
     expect(result.detectedLink?.page).toBe("Home");
@@ -79,13 +84,19 @@ describe("classifyNode", () => {
   });
 
   it("TEXT: falls through to the heading heuristic when not a Link", () => {
-    const node = textNode({ text: { segments: [segment({ fontSize: 40, fontWeight: "400" })] } });
+    const node = textNode({
+      text: { segments: [segment({ fontSize: 40, fontWeight: "400" })] },
+    });
     expect(classifyNode(node, {}, noopWarn)).toEqual({ headingLevel: 1 });
   });
 
   it("TEXT: plain body text classifies as neither a link nor a heading", () => {
-    const node = textNode({ text: { segments: [segment({ fontSize: 16, fontWeight: "400" })] } });
-    expect(classifyNode(node, {}, noopWarn)).toEqual({ headingLevel: undefined });
+    const node = textNode({
+      text: { segments: [segment({ fontSize: 16, fontWeight: "400" })] },
+    });
+    expect(classifyNode(node, {}, noopWarn)).toEqual({
+      headingLevel: undefined,
+    });
   });
 
   it("FRAME: a valid 'Form / {Name}' node returns detectedForm, checked before Link", () => {
@@ -93,20 +104,40 @@ describe("classifyNode", () => {
       id: "input-1",
       uniqueName: "Input / Email",
       children: [
-        textNode({ id: "label-1", uniqueName: "Label / Email Address", text: { segments: [segment({ characters: "Email" })] } }),
+        textNode({
+          id: "label-1",
+          uniqueName: "Label / Email Address",
+          text: { segments: [segment({ characters: "Email" })] },
+        }),
         frameNode({
           id: "field-1",
           uniqueName: "Field",
-          children: [textNode({ id: "hint-1", uniqueName: "Hint", text: { segments: [segment({ characters: "you@example.com" })] } })],
+          children: [
+            textNode({
+              id: "hint-1",
+              uniqueName: "Hint",
+              text: { segments: [segment({ characters: "you@example.com" })] },
+            }),
+          ],
         }),
       ],
     });
     const button = frameNode({
       id: "button-1",
       uniqueName: "Button / Submit",
-      children: [textNode({ id: "label-2", uniqueName: "Label / Submit Caption", text: { segments: [segment({ characters: "Submit" })] } })],
+      children: [
+        textNode({
+          id: "label-2",
+          uniqueName: "Label / Submit Caption",
+          text: { segments: [segment({ characters: "Submit" })] },
+        }),
+      ],
     });
-    const form = frameNode({ id: "form-1", uniqueName: "Form / Signup", children: [input, button] });
+    const form = frameNode({
+      id: "form-1",
+      uniqueName: "Form / Signup",
+      children: [input, button],
+    });
 
     const result = classifyNode(form, {}, noopWarn);
     expect(result.detectedForm).toBeDefined();
@@ -116,7 +147,11 @@ describe("classifyNode", () => {
   });
 
   it("FRAME: falls through to Link detection when the Form shape doesn't match", () => {
-    const label = textNode({ id: "label-1", uniqueName: "Nav Label", text: { segments: [segment({ characters: "Pricing" })] } });
+    const label = textNode({
+      id: "label-1",
+      uniqueName: "Nav Label",
+      text: { segments: [segment({ characters: "Pricing" })] },
+    });
     const node = frameNode({ uniqueName: "Link / Pricing", children: [label] });
 
     const result = classifyNode(node, {}, noopWarn);
@@ -135,7 +170,11 @@ describe("classifyNode", () => {
 
   it("surfaces detectForm's structural-mismatch warning via the supplied warn callback", () => {
     const badChild = frameNode({ id: "mystery-1", uniqueName: "Mystery" });
-    const form = frameNode({ id: "form-1", uniqueName: "Form / Broken", children: [badChild] });
+    const form = frameNode({
+      id: "form-1",
+      uniqueName: "Form / Broken",
+      children: [badChild],
+    });
     const messages: string[] = [];
     const result = classifyNode(form, {}, (message) => messages.push(message));
     expect(result.detectedForm).toBeUndefined();
@@ -146,7 +185,9 @@ describe("classifyNode", () => {
 
 describe("walkDesignTree", () => {
   /** A minimal fake target: TBlock is just the visited node's own id, joined for containers. */
-  const recordingTarget = (visited: string[]): PublishTarget<string, undefined> => ({
+  const recordingTarget = (
+    visited: string[],
+  ): PublishTarget<string, undefined> => ({
     id: "test-target",
     modes: {},
     mapNode: (node, _classification, _ctx, mapChild) => {
@@ -160,10 +201,22 @@ describe("walkDesignTree", () => {
     const visited: string[] = [];
     const tree = frameNode({
       id: "root",
-      children: [textNode({ id: "child-a" }), frameNode({ id: "child-b", children: [textNode({ id: "grandchild" })] })],
+      children: [
+        textNode({ id: "child-a" }),
+        frameNode({
+          id: "child-b",
+          children: [textNode({ id: "grandchild" })],
+        }),
+      ],
     });
 
-    const result = walkDesignTree(tree, recordingTarget(visited), undefined, {}, () => {});
+    const result = walkDesignTree(
+      tree,
+      recordingTarget(visited),
+      undefined,
+      {},
+      () => {},
+    );
 
     expect(result).toBe("root(child-a,child-b(grandchild))");
     expect(visited).toEqual(["root", "child-a", "child-b", "grandchild"]);
@@ -189,14 +242,20 @@ describe("walkDesignTree", () => {
   it("threads a node's own id into the (nodeId, message) warn callback, not just the message", () => {
     const warnings: Array<{ nodeId: string; message: string }> = [];
     const badChild = frameNode({ id: "mystery-1", uniqueName: "Mystery" });
-    const form = frameNode({ id: "form-1", uniqueName: "Form / Broken", children: [badChild] });
+    const form = frameNode({
+      id: "form-1",
+      uniqueName: "Form / Broken",
+      children: [badChild],
+    });
     const target: PublishTarget<string, undefined> = {
       id: "test-target",
       modes: {},
       mapNode: (node) => node.id,
     };
 
-    walkDesignTree(form, target, undefined, {}, (nodeId, message) => warnings.push({ nodeId, message }));
+    walkDesignTree(form, target, undefined, {}, (nodeId, message) =>
+      warnings.push({ nodeId, message }),
+    );
 
     expect(warnings).toHaveLength(1);
     expect(warnings[0].nodeId).toBe("form-1");

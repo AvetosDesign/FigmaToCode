@@ -31,13 +31,13 @@ The generator is deterministic and runs inside Figma's plugin sandbox. It does n
 
 ## Output targets
 
-| Target        | Available output modes                                      |
-| ------------- | ----------------------------------------------------------- |
-| HTML          | HTML, React (JSX), Svelte, styled-components                |
-| Tailwind CSS  | HTML, React (JSX), Twig; supports Tailwind 3 and Tailwind 4 |
-| Flutter       | Full app, stateless widget, or snippet                      |
-| SwiftUI       | Preview, `View` struct, or snippet                          |
-| WordPress     | WP Theme or Design Bundle, zipped for download (see below)  |
+| Target       | Available output modes                                      |
+| ------------ | ----------------------------------------------------------- |
+| HTML         | HTML, React (JSX), Svelte, styled-components                |
+| Tailwind CSS | HTML, React (JSX), Twig; supports Tailwind 3 and Tailwind 4 |
+| Flutter      | Full app, stateless widget, or snippet                      |
+| SwiftUI      | Preview, `View` struct, or snippet                          |
+| WordPress    | WP Theme or Design Bundle, zipped for download (see below)  |
 
 The plugin can also package generated code and local image assets into downloadable starters:
 
@@ -52,7 +52,7 @@ These exports are deliberately small and dependency-light. They are starting poi
 Alongside the four code targets above, the plugin can generate Page Patterns for a **self-hosted WordPress site** running the block editor (Full Site Editing). Pick "WordPress" as the target, then choose one of two output modes:
 
 - **WP Theme** — a complete, installable WordPress block theme: `theme.json`, `style.css`, a page template with header/footer template parts, and one starter Pattern per top-level layer in your selection, packaged as `theme.zip`. Install it via **Appearance → Themes → Add New → Upload Theme** in WordPress, or unzip it into `wp-content/themes/`.
-- **Design Bundle** — the same normalized node tree the code targets convert from, exported instead as a `design-bundle.json` manifest plus an `assets/` folder of exported images, zipped. It's a target-neutral snapshot meant for another tool to read, not for pasting into a site directly — think of it as the "Normalize" stage of [How conversion works](#how-conversion-works) written to disk before any target-specific "Generate" step runs. 
+- **Design Bundle** — the same normalized node tree the code targets convert from, exported instead as a `design-bundle.json` manifest plus an `assets/` folder of exported images, zipped. It's a target-neutral snapshot meant for another tool to read, not for pasting into a site directly — think of it as the "Normalize" stage of [How conversion works](#how-conversion-works) written to disk before any target-specific "Generate" step runs.
 
 ## What you can tune
 
@@ -68,7 +68,7 @@ Options appear only when they apply to the selected target:
 - Set the theme or bundle name for WordPress.
 - Embed fonts in the theme or bundle for WordPress.
 
-The interface also includes a visual preview, light and dark preview backgrounds, conversion warnings, extracted colors and gradients, code copying, and project downloads.  Note: WordPress targets do not display copyable code; they display theme or bundle information (designs, patterns, assets, fonts) instead.
+The interface also includes a visual preview, light and dark preview backgrounds, conversion warnings, extracted colors and gradients, code copying, and project downloads. Note: WordPress targets do not display copyable code; they display theme or bundle information (designs, patterns, assets, fonts) instead.
 
 ## How to use it
 
@@ -170,15 +170,15 @@ pnpm format:check   # Check formatting without writing
 
 ### Repository structure
 
-| Path                                | Purpose                                                                                                     |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `packages/backend`                  | Figma node processing, intermediate representation, code generators, and project exports                    |
-| `packages/backend/src/wordpress`    | WordPress export — generates a block theme or Design Bundle from the normalized node tree instead of code   |
-| `packages/plugin-ui`                | Shared React interface used by the plugin and interactive website demo                                      |
-| `packages/types`                    | Shared settings, message, preview, and output types                                                         |
-| `packages/tsconfig`                 | Shared TypeScript configuration                                                                             |
-| `apps/plugin`                       | Figma controller and UI entry points; builds `code.js` and `index.html`                                     |
-| `apps/web`                          | Public website, interactive preview, privacy page, and comparison guides                                    |
+| Path                             | Purpose                                                                                                   |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `packages/backend`               | Figma node processing, intermediate representation, code generators, and project exports                  |
+| `packages/backend/src/wordpress` | WordPress export — generates a block theme or Design Bundle from the normalized node tree instead of code |
+| `packages/plugin-ui`             | Shared React interface used by the plugin and interactive website demo                                    |
+| `packages/types`                 | Shared settings, message, preview, and output types                                                       |
+| `packages/tsconfig`              | Shared TypeScript configuration                                                                           |
+| `apps/plugin`                    | Figma controller and UI entry points; builds `code.js` and `index.html`                                   |
+| `apps/web`                       | Public website, interactive preview, privacy page, and comparison guides                                  |
 
 ## Contributing and support
 

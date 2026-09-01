@@ -1,6 +1,6 @@
 /**
- * Phase 9 (F2C port). Forked from `theme-creator-for-figma/cli/src/core/
- * outputSink.ts` (D117) with the Node-only `createNodeDiskSink` dropped --
+ * F2C port. Forked from `theme-creator-for-figma/cli/src/core/
+ * outputSink.ts` with the Node-only `createNodeDiskSink` dropped --
  * a Figma plugin sandbox has no `node:fs`/`node:path`, and F2C's own
  * generation flow only ever needs the in-memory sink (feeding straight
  * into `fflate`'s `zipSync`, the same mechanism `packages/backend/src/
@@ -21,7 +21,9 @@ export interface OutputSink {
   describe(): string;
 }
 
-export const createInMemorySink = (): OutputSink & { files: Record<string, Uint8Array> } => {
+export const createInMemorySink = (): OutputSink & {
+  files: Record<string, Uint8Array>;
+} => {
   const files: Record<string, Uint8Array> = {};
   return {
     files,

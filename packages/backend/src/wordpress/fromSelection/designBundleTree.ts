@@ -1,18 +1,18 @@
 /**
- * Phase 9 (F2C port, stage 2). Restored from git history (commit
- * `7ce9238`, packages/backend/src/designBundle/designBundleTree.ts) --
- * D119 deleted this alongside the standalone "Design Bundle" export
+ * F2C port. Restored from git history (commit `7ce9238`,
+ * packages/backend/src/designBundle/designBundleTree.ts) -- an earlier
+ * change deleted this alongside the standalone "Design Bundle" export
  * button it used to feed, but the button and this generation logic were
- * separable, and this logic is exactly stage 2's translation layer (see
- * D121's architecture decision: an internal-only DesignBundle-shaped
- * object built from F2C's own `nodesToJSON` output, feeding the ported
- * wp-figma-gen generation code unchanged). Only the import sources
- * changed -- `DesignBundle*`/`DesignNode*` types now come from this
- * fork's own internal `../core/types/designBundle` (D121's port) rather
- * than the public `"types"` package the old, now-removed button surfaced
- * them through. Logic is otherwise unchanged from the original.
+ * separable, and this logic is exactly the translation layer: an
+ * internal-only DesignBundle-shaped object built from F2C's own
+ * `nodesToJSON` output, feeding the ported wp-figma-gen generation code
+ * unchanged. Only the import sources changed -- `DesignBundle*`/
+ * `DesignNode*` types now come from this fork's own internal
+ * `../core/types/designBundle` rather than the public `"types"` package
+ * the old, now-removed button surfaced them through. Logic is otherwise
+ * unchanged from the original.
  */
-import type {
+import {
   DesignBundleAsset,
   DesignBundleBlendMode,
   DesignBundleColorStyle,
@@ -25,7 +25,10 @@ import type {
   DesignNode,
   DesignNodeType,
 } from "../core/types/designBundle";
-import { commonLetterSpacing, commonLineHeight } from "../../common/commonTextHeightSpacing";
+import {
+  commonLetterSpacing,
+  commonLineHeight,
+} from "../../common/commonTextHeightSpacing";
 import { DESIGN_BUNDLE_RASTER_SCALE } from "./designBundleAssets";
 
 // The tree produced by `nodesToJSON` (packages/backend/src/altNodes/jsonNodeConversion.ts)
@@ -107,7 +110,12 @@ const rgbToHex = (color: { r: number; g: number; b: number }): string => {
   return `#${toHex(color.r)}${toHex(color.g)}${toHex(color.b)}`.toUpperCase();
 };
 
-const rgbaToHex8 = (color: { r: number; g: number; b: number; a?: number }): string => {
+const rgbaToHex8 = (color: {
+  r: number;
+  g: number;
+  b: number;
+  a?: number;
+}): string => {
   const alpha = color.a ?? 1;
   const toHex = (channel: number) =>
     Math.round(Math.max(0, Math.min(1, channel)) * 255)
@@ -119,10 +127,13 @@ const rgbaToHex8 = (color: { r: number; g: number; b: number; a?: number }): str
 const findImageFill = (node: ConvertedNode): any | undefined => {
   const fills = node.fills;
   if (!Array.isArray(fills)) return undefined;
-  return fills.find((fill: any) => fill?.type === "IMAGE" && fill.visible !== false);
+  return fills.find(
+    (fill: any) => fill?.type === "IMAGE" && fill.visible !== false,
+  );
 };
 
-const hasImageFill = (node: ConvertedNode): boolean => findImageFill(node) !== undefined;
+const hasImageFill = (node: ConvertedNode): boolean =>
+  findImageFill(node) !== undefined;
 
 const hasRealChildren = (node: ConvertedNode): boolean =>
   Array.isArray(node.children) && node.children.length > 0;
@@ -147,13 +158,23 @@ const classifyNodeType = (node: ConvertedNode): DesignNodeType => {
 const resolveCornerRadius = (node: ConvertedNode): number => {
   if (typeof node.cornerRadius === "number") return node.cornerRadius;
   if (Array.isArray(node.rectangleCornerRadii)) {
-    const [topLeft, topRight, bottomRight, bottomLeft] = node.rectangleCornerRadii;
-    if (topLeft === topRight && topLeft === bottomRight && topLeft === bottomLeft) {
+    const [topLeft, topRight, bottomRight, bottomLeft] =
+      node.rectangleCornerRadii;
+    if (
+      topLeft === topRight &&
+      topLeft === bottomRight &&
+      topLeft === bottomLeft
+    ) {
       return topLeft ?? 0;
     }
     // Schema v1 only carries a single cornerRadius number — non-uniform
     // corners are approximated by their largest corner rather than dropped.
-    return Math.max(topLeft ?? 0, topRight ?? 0, bottomRight ?? 0, bottomLeft ?? 0);
+    return Math.max(
+      topLeft ?? 0,
+      topRight ?? 0,
+      bottomRight ?? 0,
+      bottomLeft ?? 0,
+    );
   }
   if (typeof node.topLeftRadius === "number") {
     return Math.max(
@@ -184,7 +205,10 @@ const fillOpacity = (paint: any): number | undefined => {
 // The three gradient kinds CSS can render natively. GRADIENT_DIAMOND is
 // deliberately absent — no CSS equivalent, so it's left collapsed to a flat
 // fallback color rather than approximated.
-const GRADIENT_KIND_BY_PAINT_TYPE: Record<string, "LINEAR" | "RADIAL" | "ANGULAR"> = {
+const GRADIENT_KIND_BY_PAINT_TYPE: Record<
+  string,
+  "LINEAR" | "RADIAL" | "ANGULAR"
+> = {
   GRADIENT_LINEAR: "LINEAR",
   GRADIENT_RADIAL: "RADIAL",
   GRADIENT_ANGULAR: "ANGULAR",
@@ -200,16 +224,24 @@ const mapGradient = (paint: any): DesignBundleGradient | undefined => {
   const kind = GRADIENT_KIND_BY_PAINT_TYPE[paint.type as string];
   if (!kind) return undefined;
   const stops = Array.isArray(paint.gradientStops) ? paint.gradientStops : [];
-  const handles = Array.isArray(paint.gradientHandlePositions) ? paint.gradientHandlePositions : [];
+  const handles = Array.isArray(paint.gradientHandlePositions)
+    ? paint.gradientHandlePositions
+    : [];
   if (stops.length === 0 || handles.length === 0) return undefined;
   const paintOpacity = typeof paint.opacity === "number" ? paint.opacity : 1;
   return {
     kind,
     stops: stops.map((stop: any) => ({
-      hex: rgbaToHex8({ ...stop.color, a: (stop.color?.a ?? 1) * paintOpacity }),
+      hex: rgbaToHex8({
+        ...stop.color,
+        a: (stop.color?.a ?? 1) * paintOpacity,
+      }),
       position: typeof stop.position === "number" ? stop.position : 0,
     })),
-    handles: handles.map((handle: any) => ({ x: handle?.x ?? 0, y: handle?.y ?? 0 })),
+    handles: handles.map((handle: any) => ({
+      x: handle?.x ?? 0,
+      y: handle?.y ?? 0,
+    })),
   };
 };
 
@@ -246,10 +278,15 @@ const mapFill = (
     // future gradient kind a downstream consumer can't render as real CSS.
     // Without this, any gradient-filled node would render with *no*
     // background whatsoever — not just for the GRADIENT_DIAMOND case.
-    const firstStopColor = Array.isArray(paint.gradientStops) ? paint.gradientStops[0]?.color : undefined;
+    const firstStopColor = Array.isArray(paint.gradientStops)
+      ? paint.gradientStops[0]?.color
+      : undefined;
     const paintOpacity = typeof paint.opacity === "number" ? paint.opacity : 1;
     const fallbackHex = firstStopColor
-      ? rgbaToHex8({ ...firstStopColor, a: (firstStopColor.a ?? 1) * paintOpacity })
+      ? rgbaToHex8({
+          ...firstStopColor,
+          a: (firstStopColor.a ?? 1) * paintOpacity,
+        })
       : undefined;
     return {
       type: "GRADIENT",
@@ -259,7 +296,11 @@ const mapFill = (
     };
   }
 
-  return { type: "OTHER", variableRef: variableId, opacity: fillOpacity(paint) };
+  return {
+    type: "OTHER",
+    variableRef: variableId,
+    opacity: fillOpacity(paint),
+  };
 };
 
 const mapStrokes = (node: ConvertedNode) => {
@@ -309,7 +350,10 @@ const nodeOpacity = (node: ConvertedNode): number | undefined => {
 // absent from this table entirely, so the fallthrough `undefined` return
 // below covers them along with LINEAR_BURN/LINEAR_DODGE (no CSS
 // equivalent) and any future/unrecognized blend mode.
-const CSS_BLEND_MODE_BY_FIGMA_BLEND_MODE: Record<string, DesignBundleBlendMode> = {
+const CSS_BLEND_MODE_BY_FIGMA_BLEND_MODE: Record<
+  string,
+  DesignBundleBlendMode
+> = {
   MULTIPLY: "multiply",
   SCREEN: "screen",
   OVERLAY: "overlay",
@@ -327,7 +371,9 @@ const CSS_BLEND_MODE_BY_FIGMA_BLEND_MODE: Record<string, DesignBundleBlendMode> 
   LUMINOSITY: "luminosity",
 };
 
-const nodeBlendMode = (node: ConvertedNode): DesignBundleBlendMode | undefined => {
+const nodeBlendMode = (
+  node: ConvertedNode,
+): DesignBundleBlendMode | undefined => {
   return CSS_BLEND_MODE_BY_FIGMA_BLEND_MODE[node.blendMode as string];
 };
 
@@ -600,7 +646,10 @@ export const buildDesignNode = (
       node.textAlignHorizontal === "JUSTIFIED"
         ? node.textAlignHorizontal
         : undefined;
-    designNode.text = { segments: mapTextSegments(node, uniqueName, styles), ...(align ? { align } : {}) };
+    designNode.text = {
+      segments: mapTextSegments(node, uniqueName, styles),
+      ...(align ? { align } : {}),
+    };
   }
 
   if (type === "IMAGE" || type === "VECTOR") {
@@ -608,7 +657,9 @@ export const buildDesignNode = (
     // node, rather than re-exporting/re-registering an identical copy for
     // every Instance. See assetIdentityKeyFor's doc comment.
     const identityKey = assetIdentityKeyFor(node.id);
-    const existing = identityKey ? assetIdentityMap.get(identityKey) : undefined;
+    const existing = identityKey
+      ? assetIdentityMap.get(identityKey)
+      : undefined;
     if (existing) {
       designNode.assetRef = existing.id;
       return designNode;
@@ -656,7 +707,9 @@ export const buildDesignNode = (
     // Frame background inside a duplicated header/footer) shouldn't be
     // re-registered per Instance either.
     const identityKey = assetIdentityKeyFor(node.id);
-    const existing = identityKey ? assetIdentityMap.get(identityKey) : undefined;
+    const existing = identityKey
+      ? assetIdentityMap.get(identityKey)
+      : undefined;
     if (existing) {
       designNode.backgroundAssetRef = existing.id;
     } else {

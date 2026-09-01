@@ -1,11 +1,11 @@
 /**
- * Phase 9 (F2C port, stage 2). Restored from git history (commit
+ * F2C port, stage 2. Restored from git history (commit
  * `7ce9238`, packages/backend/src/designBundle/designBundleTextStyles.ts)
  * -- see designBundleTree.ts's doc comment for context. Only the type
  * import source changed (`../core/types/designBundle` instead of the
  * public `"types"` package); logic is unchanged.
  */
-import type { DesignBundleTextStyle, DesignNode } from "../core/types/designBundle";
+import { DesignBundleTextStyle, DesignNode } from "../core/types/designBundle";
 import { commonLineHeight } from "../../common/commonTextHeightSpacing";
 
 /**
@@ -36,7 +36,10 @@ export const fontStyleToWeight = (styleName: string | undefined): string => {
 };
 
 /** Recursively collects every distinct textStyleId referenced by a design's TEXT nodes. */
-export const collectTextStyleIds = (node: DesignNode, into: Set<string> = new Set()): Set<string> => {
+export const collectTextStyleIds = (
+  node: DesignNode,
+  into: Set<string> = new Set(),
+): Set<string> => {
   for (const segment of node.text?.segments ?? []) {
     if (segment.textStyleId) into.add(segment.textStyleId);
   }
@@ -70,7 +73,9 @@ export const resolveTextStyles = async (
       try {
         const style = await figma.getStyleByIdAsync(id);
         if (!style || style.type !== "TEXT") {
-          warnings.push(`[design-bundle] textStyleId "${id}" did not resolve to a text style — skipped.`);
+          warnings.push(
+            `[design-bundle] textStyleId "${id}" did not resolve to a text style — skipped.`,
+          );
           return;
         }
         const textStyle = style as TextStyle;
@@ -81,7 +86,9 @@ export const resolveTextStyles = async (
         // helper, so both are directly comparable.
         let lineHeightRatio = 0;
         try {
-          const lineHeightPx = textStyle.lineHeight ? commonLineHeight(textStyle.lineHeight, fontSize) : 0;
+          const lineHeightPx = textStyle.lineHeight
+            ? commonLineHeight(textStyle.lineHeight, fontSize)
+            : 0;
           lineHeightRatio = fontSize > 0 ? (lineHeightPx || 0) / fontSize : 0;
         } catch {
           lineHeightRatio = 0;

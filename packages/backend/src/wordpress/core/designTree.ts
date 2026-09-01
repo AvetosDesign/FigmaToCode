@@ -1,36 +1,27 @@
-import type { DesignBundleTextStyle, DesignNode } from "./types/designBundle";
-import { headingLevelFor } from "./classify/headingHeuristic.ts";
-import { detectForm, type DetectedForm } from "./classify/formDetect.ts";
-import { detectLink, type DetectedLink } from "./classify/linkDetect.ts";
-import type { PublishTarget } from "../targets/target.ts";
+import { DesignBundleTextStyle, DesignNode } from "./types/designBundle";
+import { headingLevelFor } from "./classify/headingHeuristic";
+import { detectForm, DetectedForm } from "./classify/formDetect";
+import { detectLink, DetectedLink } from "./classify/linkDetect";
+import { PublishTarget } from "../targets/target";
 
 /**
- * D102 (Phase 8 step 4) — the "shared push seam" D94 called for: the one
- * place that walks a design root and decides, uniformly for every target,
- * which of D62's form convention / D73's link convention / D23's heading
- * convention apply to a given node — before handing the node off to
- * whichever target is generating output. Everything here is a direct
- * extraction of dispatch logic that today lives inline in
- * `blocks/mapNode.ts`'s `mapDesignNode` (TEXT: check link, else heading;
- * FRAME: check form, then link, else generic container) — moved here
- * unchanged in meaning, not behavior, so a second target never has to
- * re-derive (or accidentally diverge from) what "this node matches the
- * Link convention" means.
+ * The "shared push seam": the one place that walks a design root and
+ * decides, uniformly for every target, which of the form convention /
+ * link convention / heading convention apply to a given node — before
+ * handing the node off to whichever target is generating output.
+ * Everything here is a direct extraction of dispatch logic that used to
+ * live inline in `blocks/mapNode.ts`'s `mapDesignNode` (TEXT: check link,
+ * else heading; FRAME: check form, then link, else generic container) —
+ * moved here unchanged in meaning, not behavior, so a second target never
+ * has to re-derive (or accidentally diverge from) what "this node matches
+ * the Link convention" means.
  *
- * Deliberately excluded, per D94's own scoping: template-part
+ * Deliberately excluded from this module's own scope: template-part
  * classification (`core/classify/chromeDetect.ts` — a cross-*design*
  * concern, not a per-node one; still WP-consumed via
  * `theme/templateParts.ts`), asset URL resolution (`ImageSrcMode` —
  * target/mode-specific), and writing output files (a mode's own `run()`).
  * This module only ever produces a `TBlock` in memory.
- *
- * Nothing calls `walkDesignTree` yet. `blocks/mapNode.ts`'s
- * `mapDesignNode` is still the CLI's real entry point until
- * `targets/wordpress/index.ts` (`WordPressTarget`, the next Phase 8 step)
- * exists to receive classification from here instead of computing its own
- * inline. Landing the extraction on its own first, ahead of that rewire,
- * keeps this step a pure addition with zero behavior change to verify —
- * `mapDesignNode` is untouched by this commit.
  */
 
 export interface NodeClassification {
@@ -40,11 +31,11 @@ export interface NodeClassification {
    * other node type.
    */
   headingLevel?: number;
-  /** FRAME nodes only, when the `Form / {Name}` naming + child-shape convention (D62) matched. */
+  /** FRAME nodes only, when the `Form / {Name}` naming + child-shape convention matched. */
   detectedForm?: DetectedForm;
   /**
-   * TEXT or FRAME nodes, when the `Link / {page}` convention (D73)
-   * matched. Checked before `headingLevel` for TEXT, and after
+   * TEXT or FRAME nodes, when the `Link / {page}` convention matched.
+   * Checked before `headingLevel` for TEXT, and after
    * `detectedForm` for FRAME — same precedence `mapDesignNode` already
    * used.
    */
@@ -105,7 +96,10 @@ export const walkDesignTree = <TBlock, TCtx>(
   textStyles: Readonly<Record<string, DesignBundleTextStyle>>,
   warn: (nodeId: string, message: string) => void,
 ): TBlock => {
-  const classification = classifyNode(node, textStyles, (message) => warn(node.id, message));
-  const mapChild = (child: DesignNode): TBlock => walkDesignTree(child, target, ctx, textStyles, warn);
+  const classification = classifyNode(node, textStyles, (message) =>
+    warn(node.id, message),
+  );
+  const mapChild = (child: DesignNode): TBlock =>
+    walkDesignTree(child, target, ctx, textStyles, warn);
   return target.mapNode(node, classification, ctx, mapChild);
 };

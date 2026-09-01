@@ -49,16 +49,10 @@ export const defaultPluginSettings: PluginSettings = {
   thresholdPercent: 15,
   baseFontFamily: "",
   fontFamilyCustomConfig: {},
-  // Phase 9 (D115/D118): WordPress tab defaults -- "WP Theme" is the
-  // primary output (Design Bundle is the secondary, lower-visibility
-  // option per D115), and Include Fonts defaults checked per D115's
-  // original OE2 plan.
+  // WordPress tab defaults (see XC1)
   wpOutputMode: "theme",
   wpIncludeFonts: true,
-  // Phase 9 tweak: placeholder only -- getUserSettings() always
-  // overwrites this with figma.root.name right after computing settings
-  // below, since this field is intentionally session-only (see its own
-  // doc comment on WordPressSettings in types.ts).
+  // Placeholder only (see XC2)
   wpThemeName: "",
 };
 
@@ -92,13 +86,7 @@ const getUserSettings = async () => {
   };
 
   userPluginSettings = updatedPluginSrcSettings as PluginSettings;
-  // Phase 9 tweak: "Theme Name" is re-seeded from the current file's name
-  // on every plugin launch rather than restored from clientStorage above
-  // -- otherwise reopening the plugin in a different Figma file would
-  // show a stale name typed for a previous project. Edits made during
-  // this session still work (held in the in-memory userPluginSettings
-  // object); the pluginSettingWillChange handler below excludes this key
-  // when persisting so it can't leak into the next session either.
+  // Seed the theme name from the current file's name (see XC3)
   userPluginSettings.wpThemeName = figma.root.name;
   console.log("[DEBUG] getUserSettings - Final settings:", userPluginSettings);
   return userPluginSettings;
@@ -347,10 +335,7 @@ const downloadProject = async (format: DownloadProjectFormat) => {
   const pluginSettings = { ...userPluginSettings };
   if (
     pluginSettings.framework === "Compose" ||
-    // Phase 9: WordPress's two outputs ("WP Theme"/"Design Bundle") are
-    // not DownloadProjectFormat values and don't go through this
-    // download-project path at all -- WP Theme has its own parallel
-    // downloadWordPressOutput() below (D125 handles both outputs).
+    // WordPress outputs don't go through the download-project path (see XC4)
     pluginSettings.framework === "WordPress" ||
     !allowedFormatsByFramework[pluginSettings.framework].includes(format)
   ) {
@@ -407,11 +392,7 @@ const downloadProject = async (format: DownloadProjectFormat) => {
   });
 };
 
-// Phase 9 (D122 follow-up): F2C's own plugin version, handed to
-// generateThemeFiles as `cliVersion` (see that option's doc comment for
-// why this fork requires an explicit string instead of reading one off
-// disk the way the CLI original does). Bump this alongside
-// apps/plugin/package.json's own `version` field.
+// F2C's own plugin version (see XC5)
 const PLUGIN_VERSION = "1.0.0";
 
 const downloadWordPressOutput = async (outputMode: WordPressOutputMode) => {
@@ -425,15 +406,7 @@ const downloadWordPressOutput = async (outputMode: WordPressOutputMode) => {
     );
   }
 
-  // D125: both outputs share D122's buildBundleFromSelection as their
-  // translation layer -- "theme" feeds it into D121's ported
-  // generateThemeFiles, "designBundle" just zips the bundle + assets
-  // directly (see generateDesignBundleZip.ts for why this isn't the old
-  // Phase 7 button's code reused, just rebuilt on the same shared base).
-  // Phase 9 tweak: the WordPress tab's "Theme Name" field (relabeled
-  // "Bundle Name" for Design Bundle) flows straight through as each
-  // output's own name override -- blank means "fall back to the Figma
-  // file name," same as before this field existed.
+  // Both outputs share buildBundleFromSelection  (see XC6)
   const result =
     outputMode === "theme"
       ? await generateWordPressTheme(selection, pluginSettings, {
@@ -444,18 +417,7 @@ const downloadWordPressOutput = async (outputMode: WordPressOutputMode) => {
           bundleName: pluginSettings.wpThemeName,
         });
 
-  // D123 follow-up: no artificial size ceiling here, unlike
-  // downloadProject's own maxMessageSizeBytes check above. That 10MB cap
-  // was sized for lightweight code-project zips (HTML/Vite/Next.js) and
-  // never made sense for image-heavy WordPress themes -- a handful of
-  // 2x-scale raster exports routinely produces a zip several times that
-  // size with nothing wrong. There's no real ceiling to enforce in its
-  // place either: a Figma plugin has no disk to offload to (see D117/
-  // D121 on why the CLI's disk-backed OutputSink wasn't ported), so the
-  // whole zip has to cross figma.ui.postMessage in one message regardless
-  // of size. If that ever genuinely fails for a given export, it'll throw
-  // and surface through the same try/catch every other error here goes
-  // through -- not a silent hang.
+  // No artificial size ceiling here (see XC7)
   const zip = result.zip.buffer.slice(
     result.zip.byteOffset,
     result.zip.byteOffset + result.zip.byteLength,
@@ -547,11 +509,8 @@ const standardMode = async () => {
         }
       }
     } else if (msg.type === "download-wordpress") {
-      // Shares isDownloadingProject/rerunAfterDownload with the
-      // download-project path above -- both are "a heavy async
-      // figma-API-driven export is in flight, pause reconversion until
-      // it finishes" the same way, and there's no benefit to tracking
-      // that as two independent flags that could race against each other.
+      // Share isDownloadingProject/rerunAfterDownload with the
+      // download-project path above (see XC8)
       if (isLoading) {
         figma.ui.postMessage({
           type: "wordpress-download-error",
@@ -590,10 +549,7 @@ const standardMode = async () => {
       const { key, value } = msg as SettingWillChangeMessage<unknown>;
       console.log(`[DEBUG] Setting changed: ${key} = ${value}`);
       (userPluginSettings as any)[key] = value;
-      // Phase 9 tweak: never persist wpThemeName -- see its doc comment
-      // on WordPressSettings (types.ts) and getUserSettings above for why
-      // it's session-only. Deletes off a shallow copy rather than a
-      // destructured-rest omit so there's no unused-binding lint noise.
+      // Do not persist wpThemeName (see XC9)
       const settingsToPersist = { ...userPluginSettings };
       delete (settingsToPersist as any).wpThemeName;
       figma.clientStorage.setAsync("userPluginSettings", settingsToPersist);

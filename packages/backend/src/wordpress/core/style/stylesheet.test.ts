@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { addRule, addPositionRule, addNamedRule, createStylesheet, renderStylesheet } from "./stylesheet.ts";
+import {
+  addRule,
+  addPositionRule,
+  addNamedRule,
+  createStylesheet,
+  renderStylesheet,
+} from "./stylesheet";
 
 describe("stylesheet", () => {
   it("starts empty", () => {
@@ -27,10 +33,12 @@ describe("stylesheet", () => {
     const sheet = createStylesheet();
     addRule(sheet, "container", "fig-a", "color: red");
     addRule(sheet, "container", "fig-b", "color: blue");
-    expect(renderStylesheet(sheet)).toBe(".fig-a { color: red; }\n.fig-b { color: blue; }");
+    expect(renderStylesheet(sheet)).toBe(
+      ".fig-a { color: red; }\n.fig-b { color: blue; }",
+    );
   });
 
-  it("Phase A: a second node of the same kind with identical declarations reuses the first node's class instead of adding a new rule", () => {
+  it("exact-value dedup: a second node of the same kind with identical declarations reuses the first node's class instead of adding a new rule", () => {
     const sheet = createStylesheet();
     const first = addRule(sheet, "container", "fig-a", "color: red");
     const second = addRule(sheet, "container", "fig-b", "color: red");
@@ -40,17 +48,29 @@ describe("stylesheet", () => {
     expect(renderStylesheet(sheet)).toBe(".fig-a { color: red; }");
   });
 
-  it("Phase A: does not dedup across different kinds, even with identical declarations (a paragraph and an image must never share a rule)", () => {
+  it("exact-value dedup: does not dedup across different kinds, even with identical declarations (a paragraph and an image must never share a rule)", () => {
     const sheet = createStylesheet();
-    const paragraphClass = addRule(sheet, "paragraph", "fig-p", "border: 1px solid blue");
-    const imageClass = addRule(sheet, "image", "fig-i", "border: 1px solid blue");
+    const paragraphClass = addRule(
+      sheet,
+      "paragraph",
+      "fig-p",
+      "border: 1px solid blue",
+    );
+    const imageClass = addRule(
+      sheet,
+      "image",
+      "fig-i",
+      "border: 1px solid blue",
+    );
     expect(paragraphClass).toBe("fig-p");
     expect(imageClass).toBe("fig-i");
     expect(sheet.rules.size).toBe(2);
-    expect(renderStylesheet(sheet)).toBe(".fig-p { border: 1px solid blue; }\n.fig-i { border: 1px solid blue; }");
+    expect(renderStylesheet(sheet)).toBe(
+      ".fig-p { border: 1px solid blue; }\n.fig-i { border: 1px solid blue; }",
+    );
   });
 
-  it("Phase A: different declarations within the same kind never merge", () => {
+  it("exact-value dedup: different declarations within the same kind never merge", () => {
     const sheet = createStylesheet();
     addRule(sheet, "container", "fig-a", "color: red");
     addRule(sheet, "container", "fig-b", "color: green");
@@ -65,10 +85,18 @@ describe("stylesheet", () => {
     expect(renderStylesheet(sheet)).toBe(".fig-a { color: green; }");
   });
 
-  it("Phase B: addPositionRule always registers its own rule, never deduped, even with identical declarations to another position rule", () => {
+  it("position rules: addPositionRule always registers its own rule, never deduped, even with identical declarations to another position rule", () => {
     const sheet = createStylesheet();
-    const first = addPositionRule(sheet, "fig-a-pos", "position: absolute !important; left: 10px; top: 10px");
-    const second = addPositionRule(sheet, "fig-b-pos", "position: absolute !important; left: 10px; top: 10px");
+    const first = addPositionRule(
+      sheet,
+      "fig-a-pos",
+      "position: absolute !important; left: 10px; top: 10px",
+    );
+    const second = addPositionRule(
+      sheet,
+      "fig-b-pos",
+      "position: absolute !important; left: 10px; top: 10px",
+    );
     expect(first).toBe("fig-a-pos");
     expect(second).toBe("fig-b-pos");
     expect(sheet.rules.size).toBe(2);
@@ -81,19 +109,31 @@ describe("stylesheet", () => {
     expect(sheet.rules.size).toBe(0);
   });
 
-  it("a node's look rule (Phase A, dedupable) and its own position rule (Phase B, never deduped) coexist as two separate rules", () => {
+  it("a node's look rule (dedupable) and its own position rule (never deduped) coexist as two separate rules", () => {
     const sheet = createStylesheet();
     const lookClass = addRule(sheet, "container", "fig-a", "display: flex");
-    const positionClass = addPositionRule(sheet, "fig-a-pos", "position: absolute !important; left: 5px; top: 5px");
+    const positionClass = addPositionRule(
+      sheet,
+      "fig-a-pos",
+      "position: absolute !important; left: 5px; top: 5px",
+    );
     expect(lookClass).toBe("fig-a");
     expect(positionClass).toBe("fig-a-pos");
     expect(sheet.rules.size).toBe(2);
   });
 
-  it("Phase C: addNamedRule always registers its own rule under the given class name, never deduped, even with identical declarations to another named rule", () => {
+  it("named-style rules: addNamedRule always registers its own rule under the given class name, never deduped, even with identical declarations to another named rule", () => {
     const sheet = createStylesheet();
-    const first = addNamedRule(sheet, "ts-heading-h1", "font-family: Inter; font-weight: 700");
-    const second = addNamedRule(sheet, "ts-heading-h2", "font-family: Inter; font-weight: 700");
+    const first = addNamedRule(
+      sheet,
+      "ts-heading-h1",
+      "font-family: Inter; font-weight: 700",
+    );
+    const second = addNamedRule(
+      sheet,
+      "ts-heading-h2",
+      "font-family: Inter; font-weight: 700",
+    );
     expect(first).toBe("ts-heading-h1");
     expect(second).toBe("ts-heading-h2");
     expect(sheet.rules.size).toBe(2);
@@ -109,11 +149,19 @@ describe("stylesheet", () => {
     expect(sheet.rules.size).toBe(0);
   });
 
-  it("a named-style class (Phase C), a node's look rule (Phase A), and its position rule (Phase B) coexist as three separate rules", () => {
+  it("a named-style class, a node's look rule, and its position rule coexist as three separate rules", () => {
     const sheet = createStylesheet();
-    const namedClass = addNamedRule(sheet, "ts-body", "font-family: Inter; font-weight: 400");
+    const namedClass = addNamedRule(
+      sheet,
+      "ts-body",
+      "font-family: Inter; font-weight: 400",
+    );
     const lookClass = addRule(sheet, "paragraph", "fig-a", "color: #333333");
-    const positionClass = addPositionRule(sheet, "fig-a-pos", "position: absolute !important; left: 5px; top: 5px");
+    const positionClass = addPositionRule(
+      sheet,
+      "fig-a-pos",
+      "position: absolute !important; left: 5px; top: 5px",
+    );
     expect(namedClass).toBe("ts-body");
     expect(lookClass).toBe("fig-a");
     expect(positionClass).toBe("fig-a-pos");

@@ -19,10 +19,7 @@ export const convertToCode = async (
     case "Compose":
       return composeMain(nodes, settings);
     case "WordPress":
-      // Phase 9 (D115/D118): the WordPress tab shows no syntax-highlighted
-      // code at all (CodePanel renders a feedback panel instead), and
-      // generation isn't wired up yet -- no point running a full HTML
-      // conversion just to discard it.
+      // The WordPress tab doesn't show syntax-highlighted code (see XC16)
       return "";
     case "HTML":
     default:

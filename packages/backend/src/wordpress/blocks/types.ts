@@ -7,7 +7,7 @@
  * the rendered HTML (`tagName`/`className`/`inlineStyle`/`innerHtml`/
  * `children`) — see ClaudeFiles/06-block-mapping.md's "Scope and approach."
  *
- * As of D27, `attrs` is no longer "best-effort" — every attr the mapper
+ * `attrs` is not "best-effort" — every attr the mapper
  * sets must correspond exactly to what the HTML actually contains, because
  * WordPress's block editor re-runs each block's own `save()` function
  * against the stored attrs and compares the result to the saved HTML
@@ -31,7 +31,7 @@ export interface GeneratedBlock {
   isVoid?: boolean;
   /** Text/HTML content for leaf blocks (paragraph, heading). Mutually exclusive with `children`. */
   innerHtml?: string;
-  /** Nested blocks for container blocks (group). Mutually exclusive with `innerHtml`. Entries may be raw pre-built HTML fragments (D22 — a template-part inclusion isn't itself a mapped DesignNode, so it doesn't fit the GeneratedBlock shape). */
+  /** Nested blocks for container blocks (group). Mutually exclusive with `innerHtml`. Entries may be raw pre-built HTML fragments (a template-part inclusion isn't itself a mapped DesignNode, so it doesn't fit the GeneratedBlock shape). */
   children?: BlockChild[];
   /** core/image wraps its <img> in a <figure> — this is that outer wrapper, when present. */
   wrapperTagName?: string;
@@ -40,10 +40,10 @@ export interface GeneratedBlock {
 
 /**
  * A child that isn't a mapped DesignNode — a pre-built raw HTML fragment,
- * rendered at whatever depth its parent container ends up at. Used for D22's
- * `<!-- wp:template-part --/>` inclusions (wrapped in an identifiable div —
- * see D22's override-handling note), which don't correspond to any single
- * DesignNode and so can't be produced by mapNode.ts.
+ * rendered at whatever depth its parent container ends up at. Used for the
+ * `<!-- wp:template-part --/>` inclusions (wrapped in an identifiable div),
+ * which don't correspond to any single DesignNode and so can't be produced
+ * by mapNode.ts.
  */
 export interface RawBlockChild {
   renderRaw: (depth: number) => string;

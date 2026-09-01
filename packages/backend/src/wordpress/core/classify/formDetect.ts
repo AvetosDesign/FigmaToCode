@@ -1,7 +1,7 @@
-import type { DesignNode } from "../types/designBundle";
+import { DesignNode } from "../types/designBundle";
 
 /**
- * D62 — Forms and in-form buttons: pure detection. Parses a `Form / {Name}`
+ * Forms and in-form buttons: pure detection. Parses a `Form / {Name}`
  * FRAME whose children all match the prescribed `Input / {FieldName}` /
  * `Button / {ButtonType}` naming + required-child-shape convention (see
  * ClaudeFiles/06-block-mapping.md's "Forms and in-form buttons" section for
@@ -32,9 +32,14 @@ const parseNamespaced = (name: string): NamespacedName | undefined => {
   return { category: match[1], rest: match[2].trim() };
 };
 
-const matchesCategory = (name: string, category: string): NamespacedName | undefined => {
+const matchesCategory = (
+  name: string,
+  category: string,
+): NamespacedName | undefined => {
   const parsed = parseNamespaced(name);
-  return parsed && parsed.category.toLowerCase() === category.toLowerCase() ? parsed : undefined;
+  return parsed && parsed.category.toLowerCase() === category.toLowerCase()
+    ? parsed
+    : undefined;
 };
 
 const matchesBareCategory = (name: string, category: string): boolean =>
@@ -65,12 +70,19 @@ const detectField = (node: DesignNode): DetectedField | undefined => {
   const parsed = matchesCategory(node.uniqueName, "Input");
   if (!parsed || node.type !== "FRAME") return undefined;
 
-  const label = node.children.find((c) => matchesCategory(c.uniqueName, "Label"));
-  const field = node.children.find((c) => matchesBareCategory(c.uniqueName, "Field"));
-  if (!label || !field || label.type !== "TEXT" || field.type !== "FRAME") return undefined;
+  const label = node.children.find((c) =>
+    matchesCategory(c.uniqueName, "Label"),
+  );
+  const field = node.children.find((c) =>
+    matchesBareCategory(c.uniqueName, "Field"),
+  );
+  if (!label || !field || label.type !== "TEXT" || field.type !== "FRAME")
+    return undefined;
 
   const valueChild = field.children.find(
-    (c) => matchesBareCategory(c.uniqueName, "Hint") || matchesBareCategory(c.uniqueName, "Value"),
+    (c) =>
+      matchesBareCategory(c.uniqueName, "Hint") ||
+      matchesBareCategory(c.uniqueName, "Value"),
   );
   if (!valueChild || valueChild.type !== "TEXT") return undefined;
 
@@ -88,7 +100,9 @@ const detectButton = (node: DesignNode): DetectedButton | undefined => {
   const parsed = matchesCategory(node.uniqueName, "Button");
   if (!parsed || node.type !== "FRAME") return undefined;
 
-  const label = node.children.find((c) => matchesCategory(c.uniqueName, "Label"));
+  const label = node.children.find((c) =>
+    matchesCategory(c.uniqueName, "Label"),
+  );
   if (!label || label.type !== "TEXT") return undefined;
 
   return { button: node, buttonType: parsed.rest, label };
@@ -106,7 +120,8 @@ export const detectForm = (
   node: DesignNode,
   warnIfNamedButInvalid?: (message: string) => void,
 ): DetectedForm | undefined => {
-  if (node.type !== "FRAME" || !matchesCategory(node.uniqueName, "Form")) return undefined;
+  if (node.type !== "FRAME" || !matchesCategory(node.uniqueName, "Form"))
+    return undefined;
 
   const fields: DetectedField[] = [];
   const buttons: DetectedButton[] = [];

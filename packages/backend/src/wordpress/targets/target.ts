@@ -1,24 +1,24 @@
-import type { DesignBundle, DesignNode } from "../core/types/designBundle";
-import type { NodeClassification } from "../core/designTree.ts";
-import type { OutputSink } from "../core/outputSink.ts";
+import { DesignBundle, DesignNode } from "../core/types/designBundle";
+import { NodeClassification } from "../core/designTree";
+import { OutputSink } from "../core/outputSink";
 
 /**
- * D102 (Phase 8 step 4) — the `PublishTarget`/`TargetMode` seam D94/D95
- * described but didn't yet define. Two different things share this file
- * deliberately, per D95's own vocabulary: a *target* (`PublishTarget`) is
+ * The `PublishTarget`/`TargetMode` seam — an internal split between the
+ * WordPress-specific rendering and the target-neutral Design-Bundle
+ * parsing/walking, ahead of any second CMS target existing. Two different
+ * things share this file deliberately: a *target* (`PublishTarget`) is
  * code inside the CLI binary — the platform-specific half of node mapping
  * plus one or more *modes* (theme/patterns today, both WordPress-only); a
- * *platform* is the separate, repo-layout-level packaging job (D95's
- * `platforms/` directory) that turns a target's output into an installable
- * artifact. This file is only about the former.
+ * *platform* is the separate, repo-layout-level packaging job (this
+ * project's `platforms/` directory) that turns a target's own output into
+ * an installable artifact. This file is only about the former.
  *
  * Nothing in the CLI constructs or consumes a `PublishTarget` yet — this is
  * the interface only, landing ahead of `targets/wordpress/index.ts` (the
- * next Phase 8 step, which will be the first, and for now only,
- * implementation) so `core/designTree.ts` has a real type to walk against.
- * `commands/theme.ts`/`commands/patterns.ts` keep calling
- * `generateThemeFiles`/`generatePatternFiles` directly and unchanged until
- * `WordPressTarget` exists to route through instead.
+ * first, and for now only, implementation) so `core/designTree.ts` has a
+ * real type to walk against. `commands/theme.ts`/`commands/patterns.ts`
+ * keep calling `generateThemeFiles`/`generatePatternFiles` directly and
+ * unchanged until `WordPressTarget` exists to route through instead.
  */
 
 /**
@@ -38,7 +38,7 @@ export interface TargetMode<TOptions> {
   /**
    * Parses this mode's own remaining argv (after the generic
    * `--bundle`/`--out`/`--target`/`--mode` flags are stripped by the
-   * future two-phase `cliArgs.ts` parse — a later Phase 8 item) into
+   * future two-phase `cliArgs.ts` parse) into
    * `TOptions`. Throws `CliUsageError` on bad input, same convention
    * `parseCliArgs` uses today.
    */
@@ -58,14 +58,19 @@ export interface TargetMode<TOptions> {
    * how `commands/theme.ts`/`commands/patterns.ts` already destructure it
    * at their own call sites.
    *
-   * Phase 9: takes an `OutputSink` rather than a plain `outDir: string` —
-   * see `core/outputSink.ts`'s doc comment. `commands/generate.ts` builds
+   * Takes an `OutputSink` rather than a plain `outDir: string` — see
+   * `core/outputSink.ts`'s doc comment. `commands/generate.ts` builds
    * the sink (`createNodeDiskSink` for the CLI today) and passes it
    * through unchanged; a future caller could pass `createInMemorySink()`
    * instead without this interface, or any mode's `run()`, needing to
    * change.
    */
-  run(bundle: DesignBundle, assets: Record<string, Uint8Array>, sink: OutputSink, options: TOptions): Promise<void> | void;
+  run(
+    bundle: DesignBundle,
+    assets: Record<string, Uint8Array>,
+    sink: OutputSink,
+    options: TOptions,
+  ): Promise<void> | void;
 }
 
 /**
@@ -82,7 +87,7 @@ export interface TargetMode<TOptions> {
  * that has no generic equivalent.
  */
 export interface PublishTarget<TBlock, TCtx> {
-  /** e.g. "wordpress". Matched against the future `--target` flag (defaults to "wordpress" per D94, for backward compatibility). */
+  /** e.g. "wordpress". Matched against the future `--target` flag (defaults to "wordpress" for backward compatibility). */
   id: string;
   /** This target's invocable modes, keyed by `TargetMode.id` (e.g. `{ theme: ..., patterns: ... }`). */
   modes: Record<string, TargetMode<unknown>>;
@@ -105,5 +110,10 @@ export interface PublishTarget<TBlock, TCtx> {
    * children's *names*, not their mapped block output, so it never calls
    * `mapChild` on them).
    */
-  mapNode(node: DesignNode, classification: NodeClassification, ctx: TCtx, mapChild: (child: DesignNode) => TBlock): TBlock;
+  mapNode(
+    node: DesignNode,
+    classification: NodeClassification,
+    ctx: TCtx,
+    mapChild: (child: DesignNode) => TBlock,
+  ): TBlock;
 }

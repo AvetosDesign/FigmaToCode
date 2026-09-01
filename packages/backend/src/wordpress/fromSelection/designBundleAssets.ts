@@ -1,16 +1,16 @@
 /**
- * Phase 9 (F2C port, stage 2). Restored from git history (commit
- * `7ce9238`, packages/backend/src/designBundle/designBundleAssets.ts) --
- * see designBundleTree.ts's doc comment for the full context on why this
- * is being restored rather than written fresh. Two changes from the
+ * F2C port. Restored from git history (commit `7ce9238`,
+ * packages/backend/src/designBundle/designBundleAssets.ts) -- see
+ * designBundleTree.ts's doc comment for the full context on why this is
+ * being restored rather than written fresh. Two changes from the
  * original: `DesignBundleAsset` now comes from this fork's internal
  * `../core/types/designBundle` instead of the public `"types"` package,
- * and UTF-8 encoding goes through D121's `core/textEncoding.ts`'s
- * `encodeText` instead of the original's own local `designBundleUtils.ts`
- * (dropped -- redundant with textEncoding.ts's own TextEncoder-or-
- * fallback helper, already ported for the generation code this feeds).
+ * and UTF-8 encoding goes through `core/textEncoding.ts`'s `encodeText`
+ * instead of the original's own local `designBundleUtils.ts` (dropped --
+ * redundant with textEncoding.ts's own TextEncoder-or-fallback helper,
+ * already ported for the generation code this feeds).
  */
-import type { DesignBundleAsset } from "../core/types/designBundle";
+import { DesignBundleAsset } from "../core/types/designBundle";
 import { addWarning } from "../../common/commonConversionWarnings";
 import { encodeText } from "../core/textEncoding";
 
@@ -101,9 +101,9 @@ export const exportDesignBundleAssets = async (
       return;
     }
 
-    const figmaNode = (await figma.getNodeByIdAsync(
-      asset.figmaNodeId,
-    )) as (SceneNode & ExportMixin) | null;
+    const figmaNode = (await figma.getNodeByIdAsync(asset.figmaNodeId)) as
+      | (SceneNode & ExportMixin)
+      | null;
 
     if (!figmaNode || !("exportAsync" in figmaNode)) {
       addWarning(

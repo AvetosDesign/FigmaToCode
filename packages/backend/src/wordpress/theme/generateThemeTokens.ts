@@ -1,8 +1,10 @@
-import type { DesignBundle, DesignBundleTextStyle } from "../core/types/designBundle";
-import { assignUniqueSlugs, toPresetSlug } from "../core/slugify.ts";
-import { addNamedRule } from "../core/style/stylesheet.ts";
-import type { Stylesheet } from "../core/style/stylesheet.ts";
-import { fontFamilyDeclaration, joinStyles } from "../core/style/styleHelpers.ts";
+import {
+  DesignBundle,
+  DesignBundleTextStyle,
+} from "../core/types/designBundle";
+import { assignUniqueSlugs, toPresetSlug } from "../core/slugify";
+import { addNamedRule, Stylesheet } from "../core/style/stylesheet";
+import { fontFamilyDeclaration, joinStyles } from "../core/style/styleHelpers";
 
 export interface ThemeColorToken {
   slug: string;
@@ -33,11 +35,11 @@ export interface ThemeTokens {
 /**
  * Real `theme.json` design tokens from the bundle's `styles.colors` and
  * `styles.textStyles` dictionaries (Figma variables and named text
- * styles), replacing the bootstrap `theme.json` D21/D22 shipped
- * (`appearanceTools: true` + template registration only, no actual
- * palette/typography). Slugs go through the same collision-safe
- * `assignUniqueSlugs` D15/D22 already use for template filenames, so two
- * styles that both slugify to e.g. "primary" don't collide silently.
+ * styles), replacing an earlier bootstrap `theme.json` this project
+ * shipped (`appearanceTools: true` + template registration only, no
+ * actual palette/typography). Slugs go through the same collision-safe
+ * `assignUniqueSlugs` already used elsewhere for template filenames, so
+ * two styles that both slugify to e.g. "primary" don't collide silently.
  */
 export const buildThemeTokens = (bundle: DesignBundle): ThemeTokens => {
   const colorEntries = Object.entries(bundle.styles.colors);
@@ -72,19 +74,28 @@ export const buildThemeTokens = (bundle: DesignBundle): ThemeTokens => {
       familySlugs.set(style.fontFamily, toPresetSlug(style.fontFamily));
     }
   }
-  const fontFamilies: ThemeFontFamilyToken[] = Array.from(familySlugs, ([fontFamily, slug]) => ({
-    slug,
-    fontFamily,
-    name: fontFamily,
-  }));
+  const fontFamilies: ThemeFontFamilyToken[] = Array.from(
+    familySlugs,
+    ([fontFamily, slug]) => ({
+      slug,
+      fontFamily,
+      name: fontFamily,
+    }),
+  );
 
-  return { colorPalette, fontSizes, fontFamilies, colorSlugByVariableRef, fontSizeSlugByTextStyleId };
+  return {
+    colorPalette,
+    fontSizes,
+    fontFamilies,
+    colorSlugByVariableRef,
+    fontSizeSlugByTextStyleId,
+  };
 };
 
 /**
- * Phase C (D127/D130, CSS optimization): the resolved named style a text
- * run's `textStyleId` matched, alongside the shared CSS class generated
- * for it -- `mapText` (`mapNode.ts`) uses `style` to decide, per property,
+ * A CSS-optimization step: the resolved named style a text run's
+ * `textStyleId` matched, alongside the shared CSS class generated for it
+ * -- `mapText` (`mapNode.ts`) uses `style` to decide, per property,
  * whether *this one run's* own family/weight/lineHeight genuinely
  * overrides the named style (an actual per-run exception, kept as its own
  * per-node declaration) or just matches it (already covered by `className`,
@@ -96,18 +107,17 @@ export interface NamedStyleClass {
 }
 
 /**
- * Phase C (D127, CSS optimization): finishes what D24 proposed and D26
- * partially delivered -- one shared CSS class per Figma named text style,
- * covering the properties D26's own `theme.json` presets don't reach
- * (font-family, font-weight, line-height). Font-size and color are
- * deliberately NOT duplicated here -- D26 already covers those via real WP
- * presets (`fontSizeSlugByTextStyleId`/`colorSlugByVariableRef` above),
- * and this phase's whole point is extending that same preset-backed
- * legibility to the properties WP's own preset mechanism has no concept
- * of, not re-deriving what already works.
+ * One shared CSS class per Figma named text style, covering the
+ * properties the `theme.json` presets above don't reach (font-family,
+ * font-weight, line-height). Font-size and color are deliberately NOT
+ * duplicated here -- those are already covered via real WP presets
+ * (`fontSizeSlugByTextStyleId`/`colorSlugByVariableRef` above), and this
+ * step's whole point is extending that same preset-backed legibility to
+ * the properties WP's own preset mechanism has no concept of, not
+ * re-deriving what already works.
  *
- * The class name is the point, per Sean's direction: it needs to stay
- * legibly tied to the Figma style it came from, not be an opaque hash.
+ * The class name is the point: it needs to stay legibly tied to the
+ * Figma style it came from, not be an opaque hash.
  * Rather than assigning a brand-new slug, this reuses the exact slug
  * `fontSizeSlugByTextStyleId` above already computed for the same style
  * (same `assignUniqueSlugs`/`toPresetSlug` pass, so it's already
@@ -117,7 +127,7 @@ export interface NamedStyleClass {
  * instead of picking an unrelated name for each.
  *
  * Every named style always gets its own class (`addNamedRule`, no
- * content-based dedup) -- unlike Phase A's per-node dedup, two different
+ * content-based dedup) -- unlike the per-node dedup used elsewhere in the stylesheet, two different
  * named styles that happen to produce byte-identical declarations still
  * never collapse into one shared rule, since keeping the class legibly
  * tied to *which* Figma style it came from is the entire requirement here,
@@ -126,7 +136,7 @@ export interface NamedStyleClass {
  * A textStyleId with empty resulting declarations (e.g. no fontFamily) is
  * omitted from the returned map entirely, same as every other
  * `add*Rule`-based builder in this file -- `mapText` then behaves exactly
- * as it did before Phase C for that run, since there's nothing this class
+ * as it did before this mechanism existed for that run, since there's nothing this class
  * would have added.
  */
 export const buildNamedStyleClasses = (

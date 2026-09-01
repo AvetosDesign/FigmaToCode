@@ -1,11 +1,9 @@
 /**
- * Phase 9 (D125 follow-up to D122/D123): the "Design Bundle" download --
- * the raw, internal `DesignBundle` JSON + its exported assets, zipped up
- * for direct download rather than fed into `generateThemeFiles` the way
- * `generateWordPressTheme.ts` (D123) does. This is the closest thing to
- * the old Phase 7 standalone "Design Bundle" export button (D119 removed
- * it, D122 restored the selection-walking logic it depended on) --
- * rebuilt fresh per D122's roadmap note, using D122's
+ * The "Design Bundle" download -- the raw, internal `DesignBundle` JSON +
+ * its exported assets, zipped up for direct download rather than fed
+ * into `generateThemeFiles` the way `generateWordPressTheme.ts` does.
+ * This is the closest thing to an old, since-removed standalone "Design
+ * Bundle" export button -- rebuilt fresh using
  * `buildBundleFromSelection` as the shared translation layer both
  * WordPress outputs now go through.
  *
@@ -13,7 +11,7 @@
  * packages/backend/src/designBundle/designBundleZip.ts's
  * `generateDesignBundleZip`) with two real differences beyond the
  * import-source change every file in this directory needs: (1) takes
- * `assets: Record<string, Uint8Array>` (D122's `buildBundleFromSelection`
+ * `assets: Record<string, Uint8Array>` (`buildBundleFromSelection`'s
  * shape, keyed by `DesignBundleAsset.fileName`) instead of the old
  * `ExportedDesignBundleAsset[]` array -- there's no array form anywhere
  * in this fork to convert from; (2) this function now also calls
@@ -23,8 +21,8 @@
  * `generateWordPressTheme.ts` mirror now).
  */
 import { zipSync } from "fflate";
-import type { PluginSettings } from "types";
-import type { WordPressGenerationSummary } from "types";
+import { PluginSettings } from "types";
+import { WordPressGenerationSummary } from "types";
 import { buildBundleFromSelection } from "./fromSelection/buildBundleFromSelection";
 import { toSlug } from "./core/slugify";
 import { encodeText } from "./core/textEncoding";
@@ -38,7 +36,7 @@ export interface GenerateDesignBundleZipResult {
 }
 
 export interface GenerateDesignBundleZipOptions {
-  /** Phase 9 tweak: the WordPress tab's "Theme Name" field, relabeled "Bundle Name" for this output mode (same setting as `generateWordPressTheme`'s `themeName`, code.ts's `userPluginSettings.wpThemeName`) -- overrides this zip's own `fileName`. Blank/undefined falls back to `bundle.meta.figmaFileName`, same as before this option existed. */
+  /** The WordPress tab's "Theme Name" field, relabeled "Bundle Name" for this output mode (same setting as `generateWordPressTheme`'s `themeName`, code.ts's `userPluginSettings.wpThemeName`) -- overrides this zip's own `fileName`. Blank/undefined falls back to `bundle.meta.figmaFileName`, same as before this option existed. */
   bundleName?: string;
 }
 
@@ -47,7 +45,10 @@ export const generateDesignBundleZip = async (
   settings: PluginSettings,
   options: GenerateDesignBundleZipOptions = {},
 ): Promise<GenerateDesignBundleZipResult> => {
-  const { bundle, assets, warnings } = await buildBundleFromSelection(selection, settings);
+  const { bundle, assets, warnings } = await buildBundleFromSelection(
+    selection,
+    settings,
+  );
 
   const files: Record<string, Uint8Array> = {
     "design-bundle.json": encodeText(JSON.stringify(bundle, null, 2)),

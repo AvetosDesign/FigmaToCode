@@ -2,14 +2,14 @@
  * Portable, non-cryptographic content hash for asset-dedup purposes
  * (`loadBundle.ts`'s `dedupeAssetsByContent`). Replaces `node:crypto`'s
  * `createHash("sha256")`, which is unavailable in the environment this
- * module needs to run in once Phase 9 ports Stage 2's disk-I/O boundary
- * to run inside the Figma plugin sandbox — that sandbox doesn't even
+ * module needs to run in once Stage 2's disk-I/O boundary was ported to
+ * run inside the Figma plugin sandbox — that sandbox doesn't even
  * provide `TextEncoder` (see FigmaToCode's own
  * `packages/backend/src/zipGenerator.ts`/`designBundleUtils.ts`, which
  * both feature-detect it), so `node:crypto` is definitely not available
  * either.
  *
- * D63's own doc comment is explicit that this is a secondary, opportunistic
+ * This is a secondary, opportunistic
  * dedup pass, not a security- or correctness-critical mechanism — collapsing
  * two *different* assets onto the same generated filename because of a hash
  * collision would be a real (if extremely unlikely) bug, but nothing here

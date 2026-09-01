@@ -6,11 +6,7 @@ export type Framework =
   | "HTML"
   | "Tailwind"
   | "Compose"
-  // Phase 9 (Figma -> WordPress pipeline, see AvetosDesign's
-  // theme-creator-for-figma repo): a target peer to the code-generation
-  // frameworks above, not a code-generation language itself -- selecting
-  // it doesn't show generated code (see PluginSettings.wpOutputMode/
-  // WordPressSettings below and CodePanel's WordPress-specific branch).
+  // Figma -> WordPress pipeline (see XC28)
   | "WordPress";
 export interface HTMLSettings {
   showLayerNames: boolean;
@@ -43,32 +39,14 @@ export interface ComposeSettings {
   composeGenerationMode: "snippet" | "composable" | "screen";
 }
 /**
- * Phase 9 UI spec (D115): the WordPress tab's own two settings -- which of
- * its two outputs is selected ("WP Theme" vs. "Design Bundle", the
- * two-option button-group under "WordPress Options"), and the "Include
- * Fonts" checkbox under "Download Options" (D115: defaulted checked,
- * governs a Google Fonts network call at generation time). Neither output
- * is wired to real generation yet -- see CodePanel's WordPress branch and
- * D118 in the decisions log.
+ * The WordPress tab's settings (see XC29)
  */
 export type WordPressOutputMode = "theme" | "designBundle";
 export interface WordPressSettings {
   wpOutputMode: WordPressOutputMode;
   wpIncludeFonts: boolean;
   /**
-   * Phase 9 tweak: the WordPress tab's "Theme Name" field (CodePanel.tsx
-   * renders it adjacent to "Include Fonts" via WordPressPanel.tsx's
-   * WordPressThemeNameField, relabeled "Bundle Name" when wpOutputMode is
-   * "designBundle" -- same underlying setting, just a different label/
-   * help text per D115's original two-output split). Pre-populated with
-   * the loaded Figma file's name (figma.root.name) each time the plugin
-   * starts -- see code.ts's getUserSettings -- and deliberately never
-   * restored from clientStorage across sessions (see the
-   * pluginSettingWillChange handler there), so switching Figma files
-   * doesn't leave a stale name typed for a different project. Empty
-   * string means "use the Figma file name automatically," the same
-   * fallback generateThemeFiles.ts's styleCssHeader()/
-   * generateDesignBundleZip.ts already used before this field existed.
+   * The WordPress tab's "Theme Name" field (see XC30)
    */
   wpThemeName: string;
 }
@@ -142,22 +120,13 @@ export type ProjectDownloadErrorMessage = Message & {
   error: string;
 };
 
-/**
- * Phase 9 (D122 follow-up, stage 2 of 2 part 2): the WordPress tab's own
- * "WP Theme" download flow -- parallel to DownloadProjectMessage/
- * ProjectZipMessage/ProjectDownloadErrorMessage above but kept as its own
- * message trio rather than reusing those, since a WordPress output isn't
- * a DownloadProjectFormat (it's produced by wp-figma-gen's ported
- * generation logic -- see backend's generateWordPressTheme.ts -- not any
- * of the code-gen frameworks' own zip templates in zipGenerator.ts).
- * "Design Bundle" isn't included here: it stays disabled (D118/D122's
- * roadmap note) until its own generation path is built.
- */
+// The WordPress tab's download flow (see XC31)
 export type WordPressDownloadMessage = Message & {
   type: "download-wordpress";
   outputMode: WordPressOutputMode;
 };
-/** Counts summarizing what a WP Theme download produced, for the WordPress tab's feedback panel -- the closest equivalent it has to the other tabs' code preview. */
+
+// WP Theme summary (see XC32)
 export interface WordPressGenerationSummary {
   designCount: number;
   assetCount: number;
@@ -177,7 +146,6 @@ export type WordPressDownloadErrorMessage = Message & {
   type: "wordpress-download-error";
   error: string;
 };
-
 
 // Nodes
 export type ParentNode = BaseNode & ChildrenMixin;

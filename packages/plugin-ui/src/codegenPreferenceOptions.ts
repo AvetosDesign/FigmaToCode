@@ -62,9 +62,7 @@ export const preferenceOptions: LocalCodegenPreferenceOptions[] = [
     includedLanguages: ["HTML", "Tailwind"],
   },
   {
-    // Phase 9 (D115): the WordPress tab's "Download Options" checkbox --
-    // CodePanel.tsx renders this SettingsGroup under a "Download Options"
-    // title instead of "Styling Options" specifically for this framework.
+    // The WordPress tab's "Download Options" checkbox (see XC21)
     itemType: "individual_select",
     propertyName: "wpIncludeFonts",
     label: "Include Fonts",
@@ -133,18 +131,10 @@ export const selectPreferenceOptions: SelectPreferenceOptions[] = [
     includedLanguages: ["Compose"],
   },
   {
-    // Phase 9 (D115, wired per D122-D125, D133): the "WordPress Options"
-    // two-option button-group -- "WP Theme" (primary) and "Design Bundle"
-    // (secondary, lower-visibility per D115). Both are wired to real
-    // generation -- see generateWordPressTheme.ts/generateDesignBundleZip.ts
-    // and WordPressPanel.tsx's download button/feedback panel.
+    // The "WordPress Options" two-option button-group  (see XC22)
     itemType: "select",
     propertyName: "wpOutputMode",
-    // Note: this top-level `label` is unused for "select"-type preferences
-    // in the current UI (CodePanel.tsx hardcodes "{selectedFramework}
-    // Options" as the heading instead -- see its own comment) -- "Mode"
-    // just matches the convention every sibling select-type entry above
-    // uses, for consistency if that ever changes.
+    // Note: this top-level `label` is unused  (see XC23)
     label: "Mode",
     options: [
       { label: "WP Theme", value: "theme", isDefault: true },

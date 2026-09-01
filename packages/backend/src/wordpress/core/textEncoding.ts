@@ -7,7 +7,7 @@
  * `unescape(encodeURIComponent(...))` trick for turning a JS string into
  * UTF-8 bytes.
  *
- * Phase 9: `generateThemeFiles.ts`/`generatePatternFiles.ts` used to hand
+ * `generateThemeFiles.ts`/`generatePatternFiles.ts` used to hand
  * plain strings straight to `node:fs`'s `writeFileSync`, which encodes to
  * UTF-8 on Node's behalf. Now that both write through `OutputSink.write`
  * (`Uint8Array` only, no implicit string handling — a sink has no

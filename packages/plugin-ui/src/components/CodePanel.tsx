@@ -66,14 +66,7 @@ const CodePanel = (props: CodePanelProps) => {
     wordPressDownloadError,
     wordPressResult,
   } = props;
-  // Phase 9 (D115/D118): the WordPress tab has no generated code at all
-  // (convertToCode.ts's WordPress case returns "" deliberately) -- but it
-  // still needs its own settings panel (WordPress Options, Download
-  // Options) and feedback panel to show, which the rest of this file
-  // otherwise gates on "isCodeEmpty". Treat WordPress as never empty here;
-  // its own branches below (WordPressDownloadButton/WordPressFeedbackPanel)
-  // handle the "nothing to show yet" case explicitly instead of falling
-  // into EmptyState.
+  // The WordPress tab doesn't generate code (see XC24)
   const isCodeEmpty = code === "" && selectedFramework !== "WordPress";
 
   // Helper function to add the prefix before every class (or className) in the code.
@@ -159,9 +152,7 @@ const CodePanel = (props: CodePanelProps) => {
       "showLayerNames",
       "embedImages",
       "embedVectors",
-      // Phase 9 (D115): WordPress's "Include Fonts" checkbox lives in the
-      // renamed-for-this-tab "Download Options" group below, not a new
-      // grouping mechanism.
+      // WordPress's "Include Fonts" checkbox  (see XC25)
       "wpIncludeFonts",
     ];
 
@@ -272,9 +263,7 @@ const CodePanel = (props: CodePanelProps) => {
             <div className={hasSettingsBeforeStyling ? "mt-2" : undefined}>
               <SettingsGroup
                 title={
-                  // Phase 9 (D115): renamed for the WordPress tab, where
-                  // "Include Fonts" is the only control and "styling" isn't
-                  // really what it's choosing.
+                  // Renamed for the WordPress tab (see XC26)
                   selectedFramework === "WordPress"
                     ? "Download Options"
                     : "Styling Options"
@@ -289,10 +278,7 @@ const CodePanel = (props: CodePanelProps) => {
                     onPreferenceChanged={onPreferenceChanged}
                   />
                 )}
-                {/* Phase 9 tweak: "Theme Name" (relabeled "Bundle Name"
-                    for Design Bundle) -- lives in this same "Download
-                    Options" group, directly under "Include Fonts", so it
-                    reads as adjacent to it. */}
+                {/* "Theme Name"/"Bundle Name" (see XC27) */}
                 {selectedFramework === "WordPress" && settings && (
                   <WordPressThemeNameField
                     outputMode={settings.wpOutputMode ?? "theme"}

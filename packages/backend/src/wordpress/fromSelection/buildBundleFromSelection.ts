@@ -1,5 +1,5 @@
 /**
- * Phase 9 (F2C port, stage 2). Adapted from git history (commit `7ce9238`,
+ * F2C port. Adapted from git history (commit `7ce9238`,
  * packages/backend/src/designBundle/designBundleMain.ts's `buildDesignBundle`)
  * -- see designBundleTree.ts's doc comment for the full context on why
  * this is being restored rather than written fresh.
@@ -8,25 +8,41 @@
  * every restored file in this directory needs (`../core/types/
  * designBundle` instead of the public `"types"` package):
  *  - No zip step. The original built a standalone `design-bundle.json` +
- *    `/assets` zip for its own download button (D119 removed that button
- *    and its zip-building code, `designBundleZip.ts`, entirely -- not
- *    restored here). This function's only job now is producing the
- *    `DesignBundle` object and an `assets: Record<string, Uint8Array>`
- *    map in exactly the shape `generateThemeFiles`/`generatePatternFiles`
- *    (D121's port) already take as their own `assets` parameter --
- *    whatever wires the actual WordPress download button calls both in
- *    sequence, with no bundle-shaped zip in between.
+ *    `/assets` zip for its own download button (an earlier change removed
+ *    that button and its zip-building code, `designBundleZip.ts`,
+ *    entirely -- not restored here). This function's only job now is
+ *    producing the `DesignBundle` object and an
+ *    `assets: Record<string, Uint8Array>` map in exactly the shape
+ *    `generateThemeFiles`/`generatePatternFiles` already take as their
+ *    own `assets` parameter -- whatever wires the actual WordPress
+ *    download button calls both in sequence, with no bundle-shaped zip
+ *    in between.
  *  - `DESIGN_BUNDLE_SOURCE_TOOL`'s value was renamed from the old
  *    button's own branding string to reflect that this bundle is now
  *    purely an internal intermediate value for WordPress generation, not
  *    a user-facing exported artifact.
  */
-import type { DesignBundle, DesignBundleAsset, DesignBundleStyles, DesignNode } from "../core/types/designBundle";
-import type { PluginSettings } from "types";
+import {
+  DesignBundle,
+  DesignBundleAsset,
+  DesignBundleStyles,
+  DesignNode,
+} from "../core/types/designBundle";
+import { PluginSettings } from "types";
 import { nodesToJSON } from "../../altNodes/jsonNodeConversion";
-import { addWarning, clearWarnings, warnings } from "../../common/commonConversionWarnings";
-import { buildDesignNode, resetDesignBundleTreeState } from "./designBundleTree";
-import { collectTextStyleIds, resolveTextStyles } from "./designBundleTextStyles";
+import {
+  addWarning,
+  clearWarnings,
+  warnings,
+} from "../../common/commonConversionWarnings";
+import {
+  buildDesignNode,
+  resetDesignBundleTreeState,
+} from "./designBundleTree";
+import {
+  collectTextStyleIds,
+  resolveTextStyles,
+} from "./designBundleTextStyles";
 import { exportDesignBundleAssets } from "./designBundleAssets";
 
 // Clears assetRef/backgroundAssetRef on any node pointing at an asset that
@@ -36,7 +52,10 @@ import { exportDesignBundleAssets } from "./designBundleAssets";
 // `assets` (the whole point of the failedAssetIds plumbing; filtering
 // assets[] alone would just move the dangling reference from assets[] to
 // designs[].root...children[]).
-const clearFailedAssetRefs = (node: DesignNode, failedAssetIds: Set<string>) => {
+const clearFailedAssetRefs = (
+  node: DesignNode,
+  failedAssetIds: Set<string>,
+) => {
   if (node.assetRef && failedAssetIds.has(node.assetRef)) {
     delete node.assetRef;
   }
@@ -48,7 +67,8 @@ const clearFailedAssetRefs = (node: DesignNode, failedAssetIds: Set<string>) => 
   }
 };
 
-export const DESIGN_BUNDLE_SOURCE_TOOL = "FigmaToCode-fork/wordpress-generation@0.1.0";
+export const DESIGN_BUNDLE_SOURCE_TOOL =
+  "FigmaToCode-fork/wordpress-generation@0.1.0";
 
 export interface BuildBundleFromSelectionResult {
   bundle: DesignBundle;
@@ -60,7 +80,7 @@ export interface BuildBundleFromSelectionResult {
 /**
  * Entry point: turns the current Figma selection into a `DesignBundle`
  * object plus its exported asset bytes, ready for `generateThemeFiles`/
- * `generatePatternFiles` (D121's port) to consume.
+ * `generatePatternFiles` to consume.
  *
  * Reuses `nodesToJSON` for the actual node-tree normalization (Auto Layout,
  * variables, styled text segments, empty-frame flattening, GROUP inlining —
@@ -74,7 +94,9 @@ export const buildBundleFromSelection = async (
   settings: PluginSettings,
 ): Promise<BuildBundleFromSelectionResult> => {
   if (selection.length === 0) {
-    throw new Error("Please select at least one layer to generate a WordPress theme from.");
+    throw new Error(
+      "Please select at least one layer to generate a WordPress theme from.",
+    );
   }
 
   clearWarnings();
@@ -129,13 +151,17 @@ export const buildBundleFromSelection = async (
   for (const design of designs) {
     collectTextStyleIds(design.root, textStyleIds);
   }
-  const textStyleWarnings = await resolveTextStyles(textStyleIds, styles.textStyles);
+  const textStyleWarnings = await resolveTextStyles(
+    textStyleIds,
+    styles.textStyles,
+  );
   // Routed through addWarning (not a bare console.warn) so these actually
   // reach the plugin UI's WarningsPanel — a bare console.warn here would
   // never surface these to the user.
   for (const w of textStyleWarnings) addWarning(w);
 
-  const { exported: exportedAssets, failedAssetIds } = await exportDesignBundleAssets(assets);
+  const { exported: exportedAssets, failedAssetIds } =
+    await exportDesignBundleAssets(assets);
 
   // Drop any asset that failed to export from the manifest — otherwise
   // the bundle lists an asset with no corresponding entry in `assets`

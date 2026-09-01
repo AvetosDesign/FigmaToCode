@@ -46,14 +46,9 @@ type PluginUIProps = {
   onDownloadProject?: (format: DownloadProjectFormat) => void;
   isDownloadingProject?: boolean;
   projectDownloadError?: string | null;
-  // Whether the current Figma selection is empty. Deliberately separate
-  // from `code === ""`: WordPress's `code` is always "" by design (see
-  // convertToCode.ts), so that check alone can't tell "nothing selected"
-  // apart from "WordPress selected, real content exists" -- this bit is
-  // what the EmptyState gate below actually needs.
+  // Whether the current Figma selection is empty (see XC17)
   isEmptySelection: boolean;
-  // Phase 9 (D122 follow-up): the WordPress tab's own "WP Theme" download
-  // -- see WordPressPanel.tsx's WordPressDownloadButton/FeedbackPanel.
+  // The WordPress tab's own "WP Theme" download (see XC18)
   onDownloadWordPress?: (outputMode: WordPressOutputMode) => void;
   isDownloadingWordPress?: boolean;
   wordPressDownloadError?: string | null;
@@ -65,11 +60,7 @@ type PluginUIProps = {
   } | null;
 };
 
-// Phase 9 (D115): "WordPress" added as a fifth tab, peer to the code-
-// generation frameworks -- not itself a code-generation language (see
-// CodePanel's dedicated WordPress branch). "Compose" stays deliberately
-// unlisted here, same as before this change -- it has real preference
-// options (composeGenerationMode) but isn't surfaced as a top-level tab.
+// "WordPress" added as a fifth tab (see XC19)
 const frameworks: Framework[] = [
   "HTML",
   "Tailwind",
@@ -112,10 +103,7 @@ const FrameworkTabs = ({
     <div className="grid grid-cols-5 sm:grid-cols-3 md:grid-cols-5 gap-1 grow">
       {frameworks.map((tab) => {
         const isSelected = selectedFramework === tab && !showAbout;
-        // Phase 9 (D115): "a green WordPress tab" -- distinguishes it from
-        // the blue/primary code-generation frameworks, consistent with
-        // green already being this UI's own accent color elsewhere
-        // (SettingsGroup's toggle checkmarks, CodePanel's hover ring).
+        // WordPress tab is green (see XC20)
         const isWordPress = tab === "WordPress";
         return (
           <Button

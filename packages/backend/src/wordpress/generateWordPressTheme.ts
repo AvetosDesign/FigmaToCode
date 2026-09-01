@@ -1,22 +1,21 @@
 /**
- * Phase 9 (D122 follow-up, stage 2 of 2 part 2): the actual WP Theme call
- * site -- everything downstream of a live Figma selection needed to
- * produce a downloadable theme.zip. Ties together D122's restored
- * translation layer (`buildBundleFromSelection`) and D121's ported
- * generation logic (`generateThemeFiles`) with an in-memory `OutputSink`
- * and `fflate`'s `zipSync` (the same zipping mechanism
+ * The actual WP Theme call site -- everything downstream of a live Figma
+ * selection needed to produce a downloadable theme.zip. Ties together
+ * the restored translation layer (`buildBundleFromSelection`) and the
+ * ported generation logic (`generateThemeFiles`) with an in-memory
+ * `OutputSink` and `fflate`'s `zipSync` (the same zipping mechanism
  * `zipGenerator.ts`'s `generateProjectZip` already uses for every other
  * framework's project download), so the plugin sandbox's message handler
  * (`apps/plugin/plugin-src/code.ts`) has exactly one function to call.
  *
- * Deliberately excludes "Design Bundle" mode -- see D122's roadmap note:
- * that output has no generation path of its own yet (D119 removed the
- * old standalone zip-building code and it's a separate, unscheduled
+ * Deliberately excludes "Design Bundle" mode -- that output has no
+ * generation path of its own yet (an old standalone zip-building code
+ * path was removed earlier and rebuilding it is a separate, unscheduled
  * follow-up), so this only ever produces a theme.
  */
 import { zipSync } from "fflate";
-import type { PluginSettings } from "types";
-import type { WordPressGenerationSummary } from "types";
+import { PluginSettings } from "types";
+import { WordPressGenerationSummary } from "types";
 import { buildBundleFromSelection } from "./fromSelection/buildBundleFromSelection";
 import { generateThemeFiles } from "./theme/generateThemeFiles";
 import { createInMemorySink } from "./core/outputSink";
@@ -25,7 +24,7 @@ import { toSlug } from "./core/slugify";
 export interface GenerateWordPressThemeOptions {
   /** See `GenerateThemeOptions.cliVersion`'s own doc comment for why this fork requires an explicit version string rather than reading one off disk -- the caller (code.ts) supplies F2C's own plugin version. */
   pluginVersion: string;
-  /** Phase 9 tweak: the WordPress tab's "Theme Name" field (code.ts's `userPluginSettings.wpThemeName`) -- passed straight through as `GenerateThemeOptions.themeName`, and slugified (see `toSlug` below) to also override the theme's internal slug (pattern-slug namespace, `functions.php` handle, and this result's own `fileName`), not just the style.css header. Blank/undefined falls back to `bundle.meta.figmaFileName`, same as before this option existed. */
+  /** The WordPress tab's "Theme Name" field (code.ts's `userPluginSettings.wpThemeName`) -- passed straight through as `GenerateThemeOptions.themeName`, and slugified (see `toSlug` below) to also override the theme's internal slug (pattern-slug namespace, `functions.php` handle, and this result's own `fileName`), not just the style.css header. Blank/undefined falls back to `bundle.meta.figmaFileName`, same as before this option existed. */
   themeName?: string;
 }
 
@@ -51,15 +50,22 @@ export const generateWordPressTheme = async (
   const themeSlugOverride = themeName ? toSlug(themeName) : undefined;
 
   const sink = createInMemorySink();
-  const themeResult = await generateThemeFiles(bundle, assets, sink, themeSlugOverride, {
-    downloadFonts: settings.wpIncludeFonts,
-    cliVersion: options.pluginVersion,
-    themeName,
-  });
+  const themeResult = await generateThemeFiles(
+    bundle,
+    assets,
+    sink,
+    themeSlugOverride,
+    {
+      downloadFonts: settings.wpIncludeFonts,
+      cliVersion: options.pluginVersion,
+      themeName,
+    },
+  );
 
   const zip = zipSync(sink.files, { level: 6 });
   const themeSlug =
-    themeResult.themeSlug || toSlug(bundle.meta.figmaFileName || "generated-theme");
+    themeResult.themeSlug ||
+    toSlug(bundle.meta.figmaFileName || "generated-theme");
 
   const warnings = [
     ...bundleWarnings,

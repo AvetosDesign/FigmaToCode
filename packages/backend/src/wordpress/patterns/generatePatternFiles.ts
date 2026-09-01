@@ -1,14 +1,22 @@
-import type { DesignBundle } from "../core/types/designBundle";
-import { mapDesignNode, renderBlock, asRenderRoot } from "../blocks/index.ts";
-import type { ImageSrcMode, MappingWarning } from "../blocks/index.ts";
-import { assignUniqueSlugs } from "../core/slugify.ts";
-import { createStylesheet, renderStylesheet } from "../core/style/stylesheet.ts";
-import { buildThemeTokens, buildNamedStyleClasses } from "../theme/generateThemeTokens.ts";
-import type { OutputSink } from "../core/outputSink.ts";
-import { encodeText } from "../core/textEncoding.ts";
+import { DesignBundle } from "../core/types/designBundle";
+import {
+  mapDesignNode,
+  renderBlock,
+  asRenderRoot,
+  ImageSrcMode,
+  MappingWarning,
+} from "../blocks/index";
+import { assignUniqueSlugs } from "../core/slugify";
+import { createStylesheet, renderStylesheet } from "../core/style/stylesheet";
+import {
+  buildThemeTokens,
+  buildNamedStyleClasses,
+} from "../theme/generateThemeTokens";
+import { OutputSink } from "../core/outputSink";
+import { encodeText } from "../core/textEncoding";
 
 export interface GeneratePatternsResult {
-  /** Phase 9: `sink.describe()` — see `GenerateThemeResult.outDir`'s comment in `generateThemeFiles.ts`. */
+  /** `sink.describe()` — see `GenerateThemeResult.outDir`'s comment in `generateThemeFiles.ts`. */
   outDir: string;
   patternSlugs: string[];
   warnings: MappingWarning[];
@@ -21,9 +29,8 @@ export interface GeneratePatternsResult {
  * WordPress's real pattern-export JSON shape — confirmed against Gutenberg's
  * own "Export as JSON" implementation (Site Editor's Patterns screen and
  * wp-admin's `/wp-admin/edit.php?post_type=wp_block` list table both produce
- * this same shape; see 02-decisions-log.md's Phase 4 entry for sourcing).
- * `__file: "wp_block"` is what WordPress's "Import from JSON" button checks
- * for to recognize the file as an importable pattern.
+ * this same shape). `__file: "wp_block"` is what WordPress's "Import from
+ * JSON" button checks for to recognize the file as an importable pattern.
  */
 interface WpPatternExport {
   __file: "wp_block";
@@ -41,17 +48,15 @@ const buildPatternJson = (title: string, content: string): WpPatternExport => ({
 });
 
 /**
- * Phase 4 "patterns mode": generates one WordPress-native pattern-export
- * JSON file per `bundle.designs[]` entry (one per top-level Figma layer),
+ * "Patterns mode": generates one WordPress-native pattern-export JSON
+ * file per `bundle.designs[]` entry (one per top-level Figma layer),
  * importable via WordPress core's own "Import from JSON" button on the
- * Patterns screen — see ClaudeFiles/01-architecture.md's "Stage 2 —
- * Generation" and 04-roadmap.md's Phase 4.
+ * Patterns screen.
  *
  * Reuses the same `blocks/` mapper as theme mode (`generateThemeFiles.ts`),
- * but with two real, patterns-mode-specific differences from theme mode,
- * both logged as a new decision in 02-decisions-log.md:
+ * but with two real, patterns-mode-specific differences from theme mode:
  *
- * 1. **Image `src`.** Theme mode's D31 routes every mapped block's markup
+ * 1. **Image `src`.** Theme mode routes every mapped block's markup
  *    through a `patterns/*.php` theme file specifically so `<img src>` can
  *    be a live `<?php echo esc_url( get_stylesheet_directory_uri() ); ?>`
  *    call. A pattern imported via "Import from JSON" is stored as a
@@ -60,12 +65,12 @@ const buildPatternJson = (title: string, content: string): WpPatternExport => ({
  *    available at generation time to resolve a live URL for content that
  *    will only ever exist as stored post content, so `src` is built from a
  *    generation-time-known `assetBaseUrl` instead (`mapNode.ts`'s
- *    `ImageSrcMode`), passed in by the caller (D105: `targets/wordpress/
+ *    `ImageSrcMode`), passed in by the caller (`targets/wordpress/
  *    index.ts`'s `modes.patterns.run()`, defaulting per that file's own
  *    `DEFAULT_ASSET_BASE_URL` — moved there from `cliArgs.ts`).
  * 2. **No `theme.json`.** Theme mode registers Figma-variable-bound colors
  *    and named text styles as real `theme.json` presets
- *    (`generateThemeTokens.ts`, D26) so the WP editor's color/typography
+ *    (`generateThemeTokens.ts`) so the WP editor's color/typography
  *    pickers show the right swatch/size selected. Patterns mode ships no
  *    `theme.json` at all — a pattern is meant to be importable into
  *    whatever theme the WordPress developer already has active, and that
@@ -76,33 +81,33 @@ const buildPatternJson = (title: string, content: string): WpPatternExport => ({
  *    fallback path unconditionally, which is self-contained and renders
  *    correctly regardless of the destination theme.
  *
- *    Phase C (D127/D131, CSS optimization) IS wired in here, though,
- *    despite the "no theme.json" framing above — its named-style classes
- *    are self-contained CSS with no theme.json dependency at all (unlike
- *    the preset mechanism this point is actually about), so they fit this
+ *    The named-style CSS-optimization classes ARE wired in here, though,
+ *    despite the "no theme.json" framing above — those classes are
+ *    self-contained CSS with no theme.json dependency at all (unlike the
+ *    preset mechanism this point is actually about), so they fit this
  *    module's own "self-contained, renders correctly regardless of the
- *    destination theme" design goal rather than fighting it. `buildThemeTokens`
- *    is called below purely to get its `fontSizeSlugByTextStyleId` (so
- *    Phase C's `.ts-*` slugs stay consistent with theme mode's — see
- *    `generateThemeTokens.ts`'s own doc comment) — its `colorPalette`/
- *    `fontSizes`/`fontFamilies`/`colorSlugByVariableRef` outputs are never
- *    consulted, and nothing here becomes a `theme.json` preset. See D131.
+ *    destination theme" design goal rather than fighting it.
+ *    `buildThemeTokens` is called below purely to get its
+ *    `fontSizeSlugByTextStyleId` (so the named-style `.ts-*` slugs stay
+ *    consistent with theme mode's — see `generateThemeTokens.ts`'s own doc
+ *    comment) — its `colorPalette`/`fontSizes`/`fontFamilies`/
+ *    `colorSlugByVariableRef` outputs are never consulted, and nothing
+ *    here becomes a `theme.json` preset.
  *
- * A third difference, also new for Phase 4: unlike theme mode, WordPress
- * never auto-enqueues a stylesheet for imported pattern content — there's no
- * `style.css` a block-theme activation wires up. The same generated-CSS-
- * class mechanism theme mode uses (D27) still needs somewhere to put its
- * declarations, so every pattern's generated rules accumulate into one
- * shared companion file (`wp-figma-gen-patterns.css`) that the WordPress
- * developer must add to their active theme's stylesheet (or enqueue
- * separately) for patterns to render with correct layout/colors/spacing —
- * an explicit manual finishing step, same posture as D14/D25's other
- * intentionally-manual items.
+ * A third difference: unlike theme mode, WordPress never auto-enqueues a
+ * stylesheet for imported pattern content — there's no `style.css` a
+ * block-theme activation wires up. The same generated-CSS-class mechanism
+ * theme mode uses still needs somewhere to put its declarations, so every
+ * pattern's generated rules accumulate into one shared companion file
+ * (`wp-figma-gen-patterns.css`) that the WordPress developer must add to
+ * their active theme's stylesheet (or enqueue separately) for patterns to
+ * render with correct layout/colors/spacing — an explicit manual finishing
+ * step, same posture as this project's other intentionally-manual items.
  *
- * Phase 9: takes an `OutputSink` instead of an `outDir` string — see
- * `generateThemeFiles.ts`'s own Phase 9 doc comment for the shared
- * reasoning (no `mkdirSync`/`writeFileSync`, explicit `encodeText` for
- * generated text content).
+ * Takes an `OutputSink` instead of an `outDir` string — see
+ * `generateThemeFiles.ts`'s own doc comment for the shared reasoning (no
+ * `mkdirSync`/`writeFileSync`, explicit `encodeText` for generated text
+ * content).
  */
 export const generatePatternFiles = (
   bundle: DesignBundle,
@@ -120,11 +125,15 @@ export const generatePatternFiles = (
   const warnings: MappingWarning[] = [];
   const stylesheet = createStylesheet();
   const imageSrcMode: ImageSrcMode = { kind: "url", baseUrl: assetBaseUrl };
-  // D131: Phase C's named-style classes -- self-contained CSS, no
+  // The named-style CSS-optimization classes -- self-contained CSS, no
   // theme.json involved, see this module's doc comment point 2. Only
   // `fontSizeSlugByTextStyleId` from `buildThemeTokens` is actually used
   // (for slug reuse); its other token outputs are discarded.
-  const namedStyleClassByTextStyleId = buildNamedStyleClasses(bundle, buildThemeTokens(bundle), stylesheet);
+  const namedStyleClassByTextStyleId = buildNamedStyleClasses(
+    bundle,
+    buildThemeTokens(bundle),
+    stylesheet,
+  );
 
   bundle.designs.forEach((design, index) => {
     const slug = slugs[index];
@@ -135,14 +144,17 @@ export const generatePatternFiles = (
       imageSrcMode,
       namedStyleClassByTextStyleId,
       // Still no textStyles / colorSlugByVariableRef / fontSizeSlugByTextStyleId
-      // — see this module's doc comment, point 2. Phase C (above) is the
-      // one deliberate exception to that "no theme.json" rule, not a
-      // reversal of it.
+      // — see this module's doc comment, point 2. The named-style classes
+      // (above) are the one deliberate exception to that "no theme.json"
+      // rule, not a reversal of it.
     });
 
     const content = renderBlock(block);
     const json = buildPatternJson(design.layerName, content);
-    sink.write(`${slug}.json`, encodeText(`${JSON.stringify(json, null, 2)}\n`));
+    sink.write(
+      `${slug}.json`,
+      encodeText(`${JSON.stringify(json, null, 2)}\n`),
+    );
   });
 
   const cssFileName = "wp-figma-gen-patterns.css";

@@ -1,20 +1,22 @@
-import type { DesignBundleTextStyle, DesignBundleTextSegment } from "../types/designBundle";
+import {
+  DesignBundleTextStyle,
+  DesignBundleTextSegment,
+} from "../types/designBundle";
 
 /**
- * "Plan A" per D23: a text style named exactly `Heading/H1`-`Heading/H6`
+ * "Plan A": a text style named exactly `Heading/H1`-`Heading/H6`
  * (case-insensitive) maps directly to that heading level. This is a
  * prescribed authoring convention, not an inferred one — no fuzzy/synonym
  * matching against things like "Title" or "Eyebrow". Anything that doesn't
  * match exactly (no named style, an unrelated style name, a style id that
- * doesn't resolve) falls through to "Plan B", the pre-D23 font-size/weight
+ * doesn't resolve) falls through to "Plan B", the font-size/weight
  * heuristic below.
  *
- * Originally prescribed as `Header/H{n}` (see D23) — corrected to
- * `Heading/H{n}` after the first live-Figma export used that naming
- * naturally (it also matches 03-design-bundle-schema-draft.md's own
- * "Heading/48"-style example, and avoids colliding with D22's unrelated
- * "header/footer" site-chrome terminology in this same project). See D23's
- * live-Figma verification follow-up.
+ * Originally prescribed as `Header/H{n}` — corrected to `Heading/H{n}`
+ * after the first live-Figma export used that naming naturally (it also
+ * matches 03-design-bundle-schema-draft.md's own "Heading/48"-style
+ * example, and avoids colliding with this project's unrelated
+ * "header/footer" site-chrome terminology).
  */
 const HEADING_STYLE_NAME_PATTERN = /^heading\/h([1-6])$/i;
 
@@ -29,8 +31,10 @@ const levelFromNamedStyle = (
   return match ? Number(match[1]) : undefined;
 };
 
-/** Plan B — pre-D23 heuristic, used only when Plan A finds no named-style match. */
-const levelFromSizeHeuristic = (segment: DesignBundleTextSegment | undefined): number | undefined => {
+/** Plan B — the original size/weight heuristic, used only when Plan A finds no named-style match. */
+const levelFromSizeHeuristic = (
+  segment: DesignBundleTextSegment | undefined,
+): number | undefined => {
   if (!segment) return undefined;
   const fontSize = segment.fontSize;
   const fontWeight = parseInt(segment.fontWeight, 10) || 0;
@@ -44,20 +48,23 @@ const levelFromSizeHeuristic = (segment: DesignBundleTextSegment | undefined): n
 };
 
 /**
- * Heading-vs-paragraph decision, per 06-block-mapping.md and D23. Uses only
- * the first text segment — multi-run text with different styles/sizes per
- * run isn't handled specially in v1, same limitation as before D23.
+ * Heading-vs-paragraph decision, per 06-block-mapping.md. Uses only the
+ * first text segment — multi-run text with different styles/sizes per run
+ * isn't handled specially in v1, same limitation as the original
+ * size-only heuristic.
  *
  * `textStyles` is the bundle's `styles.textStyles` dictionary. Bundles
- * exported before D23 (or any bundle where a run has no textStyleId) will
- * have nothing to resolve here and always fall through to Plan B — that's
- * the intended, not-a-bug behavior for pre-D23 data (see D23's
- * "regenerating existing bundles" note).
+ * exported before named-style capture was added (or any bundle where a
+ * run has no textStyleId) will have nothing to resolve here and always
+ * fall through to Plan B — that's the intended, not-a-bug behavior for
+ * that older data; regenerating the bundle from Figma picks up Plan A.
  */
 export const headingLevelFor = (
   segments: readonly DesignBundleTextSegment[],
   textStyles: Readonly<Record<string, DesignBundleTextStyle>> = {},
 ): number | undefined => {
   const first = segments[0];
-  return levelFromNamedStyle(first, textStyles) ?? levelFromSizeHeuristic(first);
+  return (
+    levelFromNamedStyle(first, textStyles) ?? levelFromSizeHeuristic(first)
+  );
 };

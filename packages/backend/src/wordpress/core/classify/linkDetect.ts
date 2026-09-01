@@ -1,15 +1,15 @@
-import type { DesignNode } from "../types/designBundle";
+import { DesignNode } from "../types/designBundle";
 
 /**
- * D73 — `Link / {PageHint}` naming convention (same "Category / rest" shape
- * as D62's `Form / {Name}`): pure detection. Detects a TEXT node, or a FRAME
+ * `Link / {PageHint}` naming convention (same "Category / rest" shape as
+ * the `Form / {Name}` convention): pure detection. Detects a TEXT node, or a FRAME
  * wrapping exactly one TEXT label and at most one IMAGE/VECTOR icon, named
  * `Link / {PageHint}`, into a target-neutral `DetectedLink` description — no
  * markup, no target-specific concepts. Rendering that description as actual
  * output (a WordPress `<a>` today) is a separate, target-owned concern —
  * see `blocks/linkMapping.ts`'s `renderLink`.
  *
- * Deliberately additive, same as D62's forms: any structural mismatch
+ * Deliberately additive, same as the forms convention: any structural mismatch
  * (including a node that only starts with the right name) returns
  * `undefined` so the caller falls through to its normal node handling,
  * never a hard failure. See `06-block-mapping.md`'s "Links" section for the
@@ -22,15 +22,22 @@ import type { DesignNode } from "../types/designBundle";
 // caption/font-declaration helpers.
 const NAMESPACED = /^([A-Za-z]+)\s*\/\s*(.+)$/;
 
-const parseNamespaced = (name: string): { category: string; rest: string } | undefined => {
+const parseNamespaced = (
+  name: string,
+): { category: string; rest: string } | undefined => {
   const match = NAMESPACED.exec(name.trim());
   if (!match) return undefined;
   return { category: match[1], rest: match[2].trim() };
 };
 
-const matchesCategory = (name: string, category: string): { category: string; rest: string } | undefined => {
+const matchesCategory = (
+  name: string,
+  category: string,
+): { category: string; rest: string } | undefined => {
   const parsed = parseNamespaced(name);
-  return parsed && parsed.category.toLowerCase() === category.toLowerCase() ? parsed : undefined;
+  return parsed && parsed.category.toLowerCase() === category.toLowerCase()
+    ? parsed
+    : undefined;
 };
 
 export interface DetectedLink {
@@ -63,15 +70,28 @@ export const detectLink = (
   }
 
   const textChildren = node.children.filter((c) => c.type === "TEXT");
-  const iconChildren = node.children.filter((c) => c.type === "IMAGE" || c.type === "VECTOR");
-  const otherChildren = node.children.filter((c) => c.type !== "TEXT" && c.type !== "IMAGE" && c.type !== "VECTOR");
+  const iconChildren = node.children.filter(
+    (c) => c.type === "IMAGE" || c.type === "VECTOR",
+  );
+  const otherChildren = node.children.filter(
+    (c) => c.type !== "TEXT" && c.type !== "IMAGE" && c.type !== "VECTOR",
+  );
 
-  if (textChildren.length !== 1 || iconChildren.length > 1 || otherChildren.length > 0) {
+  if (
+    textChildren.length !== 1 ||
+    iconChildren.length > 1 ||
+    otherChildren.length > 0
+  ) {
     warnIfNamedButInvalid?.(
       `"${node.uniqueName}" is named like a Link but doesn't match the required shape (exactly one text label, at most one icon — see 06-block-mapping.md) — rendering as a plain group instead.`,
     );
     return undefined;
   }
 
-  return { linkNode: node, page: parsed.rest, label: textChildren[0], icon: iconChildren[0] };
+  return {
+    linkNode: node,
+    page: parsed.rest,
+    label: textChildren[0],
+    icon: iconChildren[0],
+  };
 };
