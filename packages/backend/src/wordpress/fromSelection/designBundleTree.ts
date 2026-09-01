@@ -30,6 +30,9 @@ import {
   commonLineHeight,
 } from "../../common/commonTextHeightSpacing";
 import { CSS_BLEND_MODE_BY_FIGMA_BLEND_MODE } from "../../common/blendMode";
+import { getCommonRadius } from "../../common/commonRadius";
+import { commonStroke } from "../../common/commonStroke";
+import { nodeSize } from "../../common/nodeWidthHeight";
 import { DESIGN_BUNDLE_RASTER_SCALE } from "./designBundleAssets";
 
 // The tree produced by `nodesToJSON` (packages/backend/src/altNodes/jsonNodeConversion.ts)
@@ -156,36 +159,29 @@ const classifyNodeType = (node: ConvertedNode): DesignNodeType => {
   return "FRAME";
 };
 
+/**
+ * Reads whichever of Figma's three corner-radius shapes this node has
+ * (RectangleNode's rectangleCornerRadii, a uniform cornerRadius, or a
+ * Frame-like node's individual topLeft/topRight/bottomRight/bottomLeft
+ * radii) via the same getCommonRadius() every other backend already
+ * uses, then collapses it to the single number Design Bundle schema v1
+ * carries -- non-uniform corners are approximated by their largest
+ * corner rather than dropped. (getCommonRadius checks rectangleCornerRadii
+ * before cornerRadius, the opposite order this function used before this
+ * extraction; harmless; per Figma's own API contract a RectangleNode's
+ * cornerRadius is only ever a number when it already agrees with a
+ * uniform rectangleCornerRadii, and figma.mixed otherwise, so the two
+ * orders can never disagree on the resulting value.)
+ */
 const resolveCornerRadius = (node: ConvertedNode): number => {
-  if (typeof node.cornerRadius === "number") return node.cornerRadius;
-  if (Array.isArray(node.rectangleCornerRadii)) {
-    const [topLeft, topRight, bottomRight, bottomLeft] =
-      node.rectangleCornerRadii;
-    if (
-      topLeft === topRight &&
-      topLeft === bottomRight &&
-      topLeft === bottomLeft
-    ) {
-      return topLeft ?? 0;
-    }
-    // Schema v1 only carries a single cornerRadius number — non-uniform
-    // corners are approximated by their largest corner rather than dropped.
-    return Math.max(
-      topLeft ?? 0,
-      topRight ?? 0,
-      bottomRight ?? 0,
-      bottomLeft ?? 0,
-    );
-  }
-  if (typeof node.topLeftRadius === "number") {
-    return Math.max(
-      node.topLeftRadius ?? 0,
-      node.topRightRadius ?? 0,
-      node.bottomRightRadius ?? 0,
-      node.bottomLeftRadius ?? 0,
-    );
-  }
-  return 0;
+  const radius = getCommonRadius(node);
+  if ("all" in radius) return radius.all;
+  return Math.max(
+    radius.topLeft,
+    radius.topRight,
+    radius.bottomRight,
+    radius.bottomLeft,
+  );
 };
 
 // Figma's `paint.color.a` (alpha baked into the fill's own color) and
@@ -304,9 +300,32 @@ const mapFill = (
   };
 };
 
+/**
+ * Reads whichever of Figma's two stroke-weight shapes this node has
+ * (individual per-side strokeTopWeight/etc., or a single uniform
+ * strokeWeight) via the same commonStroke() every other backend already
+ * uses, then collapses it to the single number Design Bundle schema v1
+ * carries -- non-uniform per-side weights are approximated by their
+ * largest side rather than dropped. Adopts commonStroke's convention for
+ * a strokeWeight of exactly 0 or figma.mixed with no per-side weights:
+ * treated as no determinable border (empty result) rather than guessing
+ * a weight, matching how every other backend already treats that case
+ * (see e.g. tailwindBorderWidth's `if (!commonBorder)` branch) instead
+ * of this function's previous ad hoc "default to 1" guess.
+ */
 const mapStrokes = (node: ConvertedNode) => {
   const strokes = Array.isArray(node.strokes) ? node.strokes : [];
-  const weight = typeof node.strokeWeight === "number" ? node.strokeWeight : 1;
+  const commonBorder = commonStroke(node);
+  if (!commonBorder) return [];
+  const weight =
+    "all" in commonBorder
+      ? commonBorder.all
+      : Math.max(
+          commonBorder.left,
+          commonBorder.right,
+          commonBorder.top,
+          commonBorder.bottom,
+        );
   return strokes
     .filter((stroke: any) => stroke?.visible !== false && stroke?.color)
     .map((stroke: any) => ({ hex: rgbToHex(stroke.color), weight }));
@@ -380,14 +399,25 @@ const mapStyle = (
   };
 };
 
-const sizingValue = (
-  sizingMode: string | undefined,
-  fixedValue: number | undefined,
-): "fill" | "hug" | number => {
-  if (sizingMode === "FILL") return "fill";
-  if (sizingMode === "HUG") return "hug";
-  return typeof fixedValue === "number" ? Math.round(fixedValue) : 0;
-};
+/**
+ * Adapts common/nodeWidthHeight.ts's nodeSize() -- shared by every other
+ * backend -- to Design Bundle schema v1's DesignBundleSizeValue. Only
+ * the boundary representation differs: nodeSize() returns `null` for
+ * "hug" (a size-agnostic sentinel meaning "emit no explicit CSS size
+ * declaration at all" -- see e.g. htmlSize.ts's `sizeToCss`-equivalent
+ * handling), where this schema spells the same case out explicitly as
+ * the string "hug" instead. Reusing nodeSize() also picks up its
+ * structural `"layoutSizingHorizontal" in node` check (present only on
+ * auto-layout-eligible nodes) in place of this function's previous
+ * unconditional "not FILL/HUG -> must have a fixed number, default to
+ * 0" fallback, which could silently emit a fabricated `width: 0px`/
+ * `height: 0px` for a node with neither a sizing mode nor a usable fixed
+ * value.
+ */
+const toDesignBundleSizeValue = (
+  value: number | "fill" | null,
+): "fill" | "hug" | number =>
+  value === "fill" ? "fill" : value === null ? "hug" : Math.round(value);
 
 const mapTextSegments = (
   node: ConvertedNode,
@@ -516,11 +546,20 @@ export const buildDesignNode = (
   const uniqueName: string = node.uniqueName ?? node.name ?? node.id;
   const type = classifyNodeType(node);
 
+  // CSS additively combines `gap` with `justify-content: space-between`
+  // (unlike Figma, where SPACE_BETWEEN alignment itself determines the
+  // spacing and itemSpacing plays no role) -- carrying itemSpacing
+  // through as `gap` here whenever SPACE_BETWEEN is active would double
+  // up the spacing in the rendered output. html's `getGap` (see
+  // htmlAutoLayout.ts) hits the same CSS behavior and suppresses gap the
+  // same way.
+  const primaryAxisAlign = (node.primaryAxisAlignItems as any) ?? "MIN";
+  const size = nodeSize(node);
   const layout: DesignNode["layout"] = {
     mode: (node.layoutMode as any) ?? "NONE",
-    primaryAxisAlign: (node.primaryAxisAlignItems as any) ?? "MIN",
+    primaryAxisAlign,
     counterAxisAlign: (node.counterAxisAlignItems as any) ?? "MIN",
-    gap: node.itemSpacing ?? 0,
+    gap: primaryAxisAlign === "SPACE_BETWEEN" ? 0 : (node.itemSpacing ?? 0),
     padding: {
       top: node.paddingTop ?? 0,
       right: node.paddingRight ?? 0,
@@ -528,8 +567,8 @@ export const buildDesignNode = (
       left: node.paddingLeft ?? 0,
     },
     sizing: {
-      width: sizingValue(node.layoutSizingHorizontal, node.width),
-      height: sizingValue(node.layoutSizingVertical, node.height),
+      width: toDesignBundleSizeValue(size.width),
+      height: toDesignBundleSizeValue(size.height),
     },
   };
   // Figma's Auto Layout wrap — `NO_WRAP` (the default) is never
@@ -541,6 +580,22 @@ export const buildDesignNode = (
     if (typeof node.counterAxisSpacing === "number") {
       layout.rowGap = node.counterAxisSpacing;
     }
+  }
+  // Rotation is fully independent of `position` below -- CSS
+  // `transform: rotate()` applies the same way whether or not the node
+  // is otherwise absolutely positioned, so every other backend in this
+  // fork emits it unconditionally rather than gating it on position (see
+  // e.g. html's htmlDefaultBuilder.ts, which runs `position()` and
+  // `blend()` -- which includes rotation -- as two unconditional,
+  // unrelated steps). Same sign convention and ancestor-rotation folding
+  // as html's `htmlRotation`: Figma's rotation direction is opposite
+  // CSS's, and `cumulativeRotation` (added by nodesToJSON's own AltNode
+  // conversion) carries in any rotation already inherited from an
+  // ancestor.
+  const rotation =
+    -Math.round((node.rotation ?? 0) + (node.cumulativeRotation ?? 0)) || 0;
+  if (rotation !== 0) {
+    layout.rotation = rotation;
   }
   // Position carries meaning when either the *parent* lays its children out
   // freely (mode NONE), or this specific node opts out of its parent's Auto

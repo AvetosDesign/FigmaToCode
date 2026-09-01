@@ -102,6 +102,17 @@ export const layoutToDeclarations = (layout: DesignBundleLayout): string => {
   // below/by the parent) remain the only real spacing mechanism.
   declarations.push(["margin", "0"]);
 
+  // Independent of flex/position below -- CSS `transform: rotate()`
+  // applies the same way whether or not the node is otherwise
+  // absolutely positioned or participating in flex flow, matching how
+  // every other backend in this fork treats rotation as unconditional
+  // (see buildDesignNode's capture of this field for the full rationale
+  // and the html precedent it follows).
+  if (layout.rotation) {
+    declarations.push(["transform", `rotate(${layout.rotation}deg)`]);
+    declarations.push(["transform-origin", "top left"]);
+  }
+
   if (layout.mode !== "NONE") {
     declarations.push(["display", "flex"]);
     declarations.push([

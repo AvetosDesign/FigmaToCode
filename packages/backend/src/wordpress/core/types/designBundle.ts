@@ -169,6 +169,17 @@ export interface DesignBundleLayout {
   // outside that case, since Auto Layout computes a child's position
   // itself.
   position?: { x: number; y: number };
+  // Figma's own rotation, already combined with any ancestor rotation via
+  // `cumulativeRotation` and converted to CSS's opposite rotation
+  // direction (see buildDesignNode's capture of this field for the exact
+  // math, which matches html's `htmlRotation` precedent). Fully
+  // independent of `position` above -- CSS `transform: rotate()` applies
+  // the same way whether or not the node is otherwise absolutely
+  // positioned, matching how every other backend in this fork treats
+  // rotation and position as unconditional, unrelated declarations
+  // rather than gating one on the other. Omitted entirely when zero,
+  // matching this schema's usual default-omission convention.
+  rotation?: number;
   // Figma's Auto Layout "wrap" (`layoutWrap: "WRAP"`) — a real, distinct
   // layout mechanism from `position` above; a wrapped, fixed-width
   // HORIZONTAL container can look identical to an absolutely-positioned
