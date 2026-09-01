@@ -133,9 +133,11 @@ export const selectPreferenceOptions: SelectPreferenceOptions[] = [
     includedLanguages: ["Compose"],
   },
   {
-    // Phase 9 (D115): the "WordPress Options" two-option button-group --
-    // "WP Theme" (primary) and "Design Bundle" (secondary, lower-
-    // visibility per D115). Neither is wired to real generation yet.
+    // Phase 9 (D115, wired per D122-D125, D133): the "WordPress Options"
+    // two-option button-group -- "WP Theme" (primary) and "Design Bundle"
+    // (secondary, lower-visibility per D115). Both are wired to real
+    // generation -- see generateWordPressTheme.ts/generateDesignBundleZip.ts
+    // and WordPressPanel.tsx's download button/feedback panel.
     itemType: "select",
     propertyName: "wpOutputMode",
     // Note: this top-level `label` is unused for "select"-type preferences
