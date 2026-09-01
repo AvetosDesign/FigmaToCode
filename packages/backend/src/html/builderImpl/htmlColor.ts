@@ -1,3 +1,8 @@
+import {
+  angularGradientCssGeometry,
+  linearGradientCssAngle,
+  radialGradientCssGeometry,
+} from "../../common/color";
 import { numberToFixedString } from "../../common/numToAutoFixed";
 import { retrieveTopFill } from "../../common/retrieveFill";
 import { GradientPaint, Paint } from "../../api_types";
@@ -159,11 +164,7 @@ export const htmlGradientFromFills = (fill: Paint): string => {
  */
 export const htmlLinearGradient = (fill: GradientPaint) => {
   const [start, end] = fill.gradientHandlePositions;
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  let angle = Math.atan2(dy, dx) * (180 / Math.PI); // Angle in degrees
-  angle = (angle + 360) % 360; // Normalize to 0-360
-  const cssAngle = (angle + 90) % 360; // Adjust for CSS convention
+  const cssAngle = linearGradientCssAngle(start, end);
   const mappedFill = processGradientStops(
     fill.gradientStops,
     fill.opacity ?? 1,
@@ -176,12 +177,7 @@ export const htmlLinearGradient = (fill: GradientPaint) => {
  */
 export const htmlRadialGradient = (fill: GradientPaint) => {
   const [center, h1, h2] = fill.gradientHandlePositions;
-  const cx = center.x * 100; // Center X as percentage
-  const cy = center.y * 100; // Center Y as percentage
-  // Calculate horizontal radius (distance from center to h1)
-  const rx = Math.sqrt((h1.x - center.x) ** 2 + (h1.y - center.y) ** 2) * 100;
-  // Calculate vertical radius (distance from center to h2)
-  const ry = Math.sqrt((h2.x - center.x) ** 2 + (h2.y - center.y) ** 2) * 100;
+  const { cx, cy, rx, ry } = radialGradientCssGeometry(center, h1, h2);
   const mappedStops = processGradientStops(
     fill.gradientStops,
     fill.opacity ?? 1,
@@ -194,13 +190,7 @@ export const htmlRadialGradient = (fill: GradientPaint) => {
  */
 export const htmlAngularGradient = (fill: GradientPaint) => {
   const [center, _, startDirection] = fill.gradientHandlePositions;
-  const cx = center.x * 100; // Center X as percentage
-  const cy = center.y * 100; // Center Y as percentage
-  // Calculate the starting angle
-  const dx = startDirection.x - center.x;
-  const dy = startDirection.y - center.y;
-  let angle = Math.atan2(dy, dx) * (180 / Math.PI); // Convert to degrees
-  angle = (angle + 360) % 360; // Normalize to 0-360 degrees
+  const { cx, cy, angle } = angularGradientCssGeometry(center, startDirection);
   const mappedFill = processGradientStops(
     fill.gradientStops,
     fill.opacity ?? 1,

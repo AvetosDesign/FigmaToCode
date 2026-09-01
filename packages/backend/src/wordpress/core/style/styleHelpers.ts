@@ -5,6 +5,15 @@ import {
   DesignBundleNodeStyle,
   DesignBundleSizeValue,
 } from "../types/designBundle";
+import {
+  counterAxisAlignToCss,
+  primaryAxisAlignToCss,
+} from "../../../common/commonAlign";
+import {
+  angularGradientCssGeometry,
+  linearGradientCssAngle,
+  radialGradientCssGeometry,
+} from "../../../common/color";
 
 /**
  * Builds `prop: value;` declarations from pairs, skipping any with an
@@ -35,38 +44,6 @@ const sizeToCss = (
       ? "width: 100%; flex: 1 1 auto"
       : "height: 100%; flex: 1 1 auto";
   return `${axis}: ${value}px`;
-};
-
-/** Figma's primaryAxisAlign -> CSS justify-content (main-axis distribution). */
-const primaryAxisAlignToCss = (
-  align: DesignBundleLayout["primaryAxisAlign"],
-): string => {
-  switch (align) {
-    case "MIN":
-      return "flex-start";
-    case "CENTER":
-      return "center";
-    case "MAX":
-      return "flex-end";
-    case "SPACE_BETWEEN":
-      return "space-between";
-  }
-};
-
-/** Figma's counterAxisAlign -> CSS align-items (cross-axis distribution). BASELINE maps 1:1 — CSS has the same keyword. */
-const counterAxisAlignToCss = (
-  align: DesignBundleLayout["counterAxisAlign"],
-): string => {
-  switch (align) {
-    case "MIN":
-      return "flex-start";
-    case "CENTER":
-      return "center";
-    case "MAX":
-      return "flex-end";
-    case "BASELINE":
-      return "baseline";
-  }
 };
 
 /**
@@ -269,31 +246,19 @@ export const gradientToCss = (gradient: DesignBundleGradient): string => {
 
   if (gradient.kind === "LINEAR") {
     const [start, end] = gradient.handles;
-    const dx = end.x - start.x;
-    const dy = end.y - start.y;
-    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    angle = (angle + 360) % 360;
-    const cssAngle = (angle + 90) % 360; // Figma's 0deg handle axis -> CSS's top-relative angle
+    const cssAngle = linearGradientCssAngle(start, end);
     return `linear-gradient(${cssAngle.toFixed(0)}deg, ${stopsAt(100, "%")})`;
   }
 
   if (gradient.kind === "RADIAL") {
     const [center, h1, h2] = gradient.handles;
-    const cx = center.x * 100;
-    const cy = center.y * 100;
-    const rx = Math.sqrt((h1.x - center.x) ** 2 + (h1.y - center.y) ** 2) * 100;
-    const ry = Math.sqrt((h2.x - center.x) ** 2 + (h2.y - center.y) ** 2) * 100;
+    const { cx, cy, rx, ry } = radialGradientCssGeometry(center, h1, h2);
     return `radial-gradient(ellipse ${rx.toFixed(2)}% ${ry.toFixed(2)}% at ${cx.toFixed(2)}% ${cy.toFixed(2)}%, ${stopsAt(100, "%")})`;
   }
 
   // ANGULAR
   const [center, , startDirection] = gradient.handles;
-  const cx = center.x * 100;
-  const cy = center.y * 100;
-  const dx = startDirection.x - center.x;
-  const dy = startDirection.y - center.y;
-  let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-  angle = (angle + 360) % 360;
+  const { cx, cy, angle } = angularGradientCssGeometry(center, startDirection);
   return `conic-gradient(from ${angle.toFixed(0)}deg at ${cx.toFixed(2)}% ${cy.toFixed(2)}%, ${stopsAt(360, "deg")})`;
 };
 
@@ -379,7 +344,12 @@ export const nodeStyleToDeclarations = (
 ): string => {
   const declarations: Array<[string, string | undefined]> = [];
 
-  const paintableFill = style.fills.find(
+  // Figma's fills array is bottom-to-top (the top/visible layer is the
+  // *last* entry, same convention `common/retrieveFill.ts`'s
+  // `retrieveTopFill` documents and reverses for) -- search from the end
+  // so a node with 2+ stacked fills renders the one Figma actually shows
+  // on top, not the bottom-most one.
+  const paintableFill = [...style.fills].reverse().find(
     (f) => (f.type === "SOLID" || f.type === "GRADIENT") && f.hex,
   );
   if (paintableFill?.hex && !skipBackground) {

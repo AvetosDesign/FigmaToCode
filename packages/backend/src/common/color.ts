@@ -80,6 +80,54 @@ export const calculateAngle = (
   return (angle + 360) % 360; // Normalize to 0-360 degrees
 };
 
+/**
+ * Figma's LINEAR gradient handle axis -> CSS `linear-gradient()` angle
+ * (degrees, 0-360). `calculateAngle` gives the handle-axis angle in
+ * Figma's own coordinate convention; CSS's `linear-gradient()` angle is
+ * offset 90deg from that (0deg points up in CSS, but along +x in Figma's
+ * handle-vector convention). Shared by html and WordPress, which each
+ * independently derived the same `+ 90) % 360` adjustment.
+ */
+export const linearGradientCssAngle = (
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+): number => (calculateAngle(start, end) + 90) % 360;
+
+/**
+ * Figma's RADIAL gradient handles (center, x-axis handle, y-axis handle,
+ * normalized 0-1) -> CSS `radial-gradient()` ellipse geometry, in
+ * percentages relative to the fill's bounding box. Shared by html and
+ * WordPress.
+ */
+export const radialGradientCssGeometry = (
+  center: { x: number; y: number },
+  h1: { x: number; y: number },
+  h2: { x: number; y: number },
+): { cx: number; cy: number; rx: number; ry: number } => {
+  const cx = center.x * 100;
+  const cy = center.y * 100;
+  const rx = Math.sqrt((h1.x - center.x) ** 2 + (h1.y - center.y) ** 2) * 100;
+  const ry = Math.sqrt((h2.x - center.x) ** 2 + (h2.y - center.y) ** 2) * 100;
+  return { cx, cy, rx, ry };
+};
+
+/**
+ * Figma's ANGULAR (conic) gradient handles -> CSS `conic-gradient()`
+ * center position and start angle. Unlike the LINEAR case, no `+ 90`
+ * CSS-convention adjustment applies here — both html and WordPress use
+ * the raw Figma-convention angle as the conic gradient's `from` angle.
+ * Shared by html and WordPress.
+ */
+export const angularGradientCssGeometry = (
+  center: { x: number; y: number },
+  startDirection: { x: number; y: number },
+): { cx: number; cy: number; angle: number } => {
+  const cx = center.x * 100;
+  const cy = center.y * 100;
+  const angle = calculateAngle(center, startDirection);
+  return { cx, cy, angle };
+};
+
 // from https://math.stackexchange.com/a/2888105
 export const decomposeRelativeTransform = (
   t1: [number, number, number],

@@ -60,6 +60,23 @@ const isDarkFigmaBackground = (background: string) => {
   );
 };
 
+// Shared download-trigger for both zip message cases below: build a
+// Blob, click a hidden <a download>, then revoke the object URL. The
+// two cases differ only in the AppState fields they set afterward
+// (wordpress-zip also carries a generation summary) -- see App.tsx's
+// own review notes on why *that* tail stays separate.
+const triggerZipDownload = (zip: ArrayBuffer, fileName: string) => {
+  const blob = new Blob([zip], { type: "application/zip" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
+
 export default function App() {
   const [state, setState] = useState<AppState>({
     code: "",
@@ -151,17 +168,7 @@ export default function App() {
 
         case "project-zip": {
           const zipMessage = untypedMessage as ProjectZipMessage;
-          const blob = new Blob([zipMessage.zip], {
-            type: "application/zip",
-          });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = zipMessage.fileName;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          URL.revokeObjectURL(url);
+          triggerZipDownload(zipMessage.zip, zipMessage.fileName);
           setState((prevState) => ({
             ...prevState,
             isDownloadingProject: false,
@@ -182,17 +189,7 @@ export default function App() {
 
         case "wordpress-zip": {
           const zipMessage = untypedMessage as WordPressZipMessage;
-          const blob = new Blob([zipMessage.zip], {
-            type: "application/zip",
-          });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = zipMessage.fileName;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          URL.revokeObjectURL(url);
+          triggerZipDownload(zipMessage.zip, zipMessage.fileName);
           setState((prevState) => ({
             ...prevState,
             isDownloadingWordPress: false,

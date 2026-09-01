@@ -1,6 +1,7 @@
 import { Paint } from "../../api_types";
 import { numberToFixedString } from "../../common/numToAutoFixed";
 import { exactValue, nearestOpacity } from "../conversionTables";
+import { CSS_BLEND_MODE_BY_FIGMA_BLEND_MODE } from "../../common/blendMode";
 
 /**
  * https://tailwindcss.com/docs/opacity/
@@ -19,39 +20,10 @@ export const tailwindOpacity = (node: MinimalBlendMixin): string => {
 // https://tailwindcss.com/docs/mix-blend-mode
 export const tailwindBlendMode = (node: MinimalBlendMixin): string => {
   if (node.blendMode !== "NORMAL" && node.blendMode !== "PASS_THROUGH") {
-    switch (node.blendMode) {
-      case "MULTIPLY":
-        return "mix-blend-multiply";
-      case "SCREEN":
-        return "mix-blend-screen";
-      case "OVERLAY":
-        return "mix-blend-overlay";
-      case "DARKEN":
-        return "mix-blend-darken";
-      case "LIGHTEN":
-        return "mix-blend-lighten";
-      case "COLOR_DODGE":
-        return "mix-blend-color-dodge";
-      case "COLOR_BURN":
-        return "mix-blend-color-burn";
-      case "HARD_LIGHT":
-        return "mix-blend-hard-light";
-      case "SOFT_LIGHT":
-        return "mix-blend-soft-light";
-      case "DIFFERENCE":
-        return "mix-blend-difference";
-      case "EXCLUSION":
-        return "mix-blend-exclusion";
-      case "HUE":
-        return "mix-blend-hue";
-      case "SATURATION":
-        return "mix-blend-saturation";
-      case "COLOR":
-        return "mix-blend-color";
-      case "LUMINOSITY":
-        return "mix-blend-luminosity";
-    }
-    return "";
+    const blendMode = node.blendMode
+      ? CSS_BLEND_MODE_BY_FIGMA_BLEND_MODE[node.blendMode]
+      : undefined;
+    return blendMode ? `mix-blend-${blendMode}` : "";
   }
   return "";
 };

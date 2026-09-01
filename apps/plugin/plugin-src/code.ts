@@ -433,6 +433,53 @@ const downloadWordPressOutput = async (outputMode: WordPressOutputMode) => {
   });
 };
 
+// Shared guard/try-catch/finally shape for the download-project and
+// download-wordpress message handlers below (see XC8): both need the
+// isLoading/isDownloadingProject guards, the same finally-block rerun
+// logic, and differ only in which error-message type they post and two
+// bits of user-facing/log text.
+const runGuardedDownload = async (
+  errorType: string,
+  itemLabel: string,
+  logLabel: string,
+  action: () => Promise<void>,
+) => {
+  if (isLoading) {
+    figma.ui.postMessage({
+      type: errorType,
+      error: "Please wait for the current conversion to finish.",
+    });
+    return;
+  }
+
+  if (isDownloadingProject) {
+    figma.ui.postMessage({
+      type: errorType,
+      error: "A project download is already in progress.",
+    });
+    return;
+  }
+
+  isDownloadingProject = true;
+  try {
+    await action();
+  } catch (error) {
+    console.error(`${logLabel} failed:`, error);
+    figma.ui.postMessage({
+      type: errorType,
+      error: `Failed to create ${itemLabel}: ${
+        error instanceof Error ? error.message : "Unknown error occurred"
+      }`,
+    });
+  } finally {
+    isDownloadingProject = false;
+    if (rerunAfterDownload) {
+      rerunAfterDownload = false;
+      void safeRun(userPluginSettings);
+    }
+  }
+};
+
 const standardMode = async () => {
   console.log("[DEBUG] standardMode - Starting standard mode initialization");
   figma.showUI(__html__, { width: 450, height: 700, themeColors: true });
@@ -474,77 +521,21 @@ const standardMode = async () => {
     if (msg.type === "ui-ready") {
       await initializeOnce();
     } else if (msg.type === "download-project") {
-      if (isLoading) {
-        figma.ui.postMessage({
-          type: "project-download-error",
-          error: "Please wait for the current conversion to finish.",
-        });
-        return;
-      }
-
-      if (isDownloadingProject) {
-        figma.ui.postMessage({
-          type: "project-download-error",
-          error: "A project download is already in progress.",
-        });
-        return;
-      }
-
-      isDownloadingProject = true;
-      try {
-        await downloadProject(msg.format as DownloadProjectFormat);
-      } catch (error) {
-        console.error("Download project failed:", error);
-        figma.ui.postMessage({
-          type: "project-download-error",
-          error: `Failed to create project: ${
-            error instanceof Error ? error.message : "Unknown error occurred"
-          }`,
-        });
-      } finally {
-        isDownloadingProject = false;
-        if (rerunAfterDownload) {
-          rerunAfterDownload = false;
-          void safeRun(userPluginSettings);
-        }
-      }
+      await runGuardedDownload(
+        "project-download-error",
+        "project",
+        "Download project",
+        () => downloadProject(msg.format as DownloadProjectFormat),
+      );
     } else if (msg.type === "download-wordpress") {
-      // Share isDownloadingProject/rerunAfterDownload with the
-      // download-project path above (see XC8)
-      if (isLoading) {
-        figma.ui.postMessage({
-          type: "wordpress-download-error",
-          error: "Please wait for the current conversion to finish.",
-        });
-        return;
-      }
-
-      if (isDownloadingProject) {
-        figma.ui.postMessage({
-          type: "wordpress-download-error",
-          error: "A project download is already in progress.",
-        });
-        return;
-      }
-
-      isDownloadingProject = true;
-      try {
-        await downloadWordPressOutput(msg.outputMode as WordPressOutputMode);
-      } catch (error) {
-        console.error("WordPress theme download failed:", error);
-        figma.ui.postMessage({
-          type: "wordpress-download-error",
-          error: `Failed to create WordPress theme: ${
-            error instanceof Error ? error.message : "Unknown error occurred"
-          }`,
-        });
-      } finally {
-        isDownloadingProject = false;
-        if (rerunAfterDownload) {
-          rerunAfterDownload = false;
-          void safeRun(userPluginSettings);
-        }
-      }
+      // Shares isDownloadingProject/rerunAfterDownload with the
+      // download-project path above via runGuardedDownload (see XC8)
+      await runGuardedDownload(
+        "wordpress-download-error",
+        "WordPress theme",
+        "WordPress theme download",
+        () => downloadWordPressOutput(msg.outputMode as WordPressOutputMode),
+      );
     } else if (msg.type === "pluginSettingWillChange") {
       const { key, value } = msg as SettingWillChangeMessage<unknown>;
       console.log(`[DEBUG] Setting changed: ${key} = ${value}`);

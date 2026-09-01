@@ -29,6 +29,7 @@ import {
   commonLetterSpacing,
   commonLineHeight,
 } from "../../common/commonTextHeightSpacing";
+import { CSS_BLEND_MODE_BY_FIGMA_BLEND_MODE } from "../../common/blendMode";
 import { DESIGN_BUNDLE_RASTER_SCALE } from "./designBundleAssets";
 
 // The tree produced by `nodesToJSON` (packages/backend/src/altNodes/jsonNodeConversion.ts)
@@ -344,33 +345,16 @@ const nodeOpacity = (node: ConvertedNode): number | undefined => {
 };
 
 // Figma's 18 `BlendMode` values -> the 13 CSS `mix-blend-mode` has a
-// native keyword for. PASS_THROUGH/NORMAL map to `undefined` (no
-// blending, same as this schema's other sparse-field opacity/gradient
-// conventions) rather than being listed here with no value — they're
-// absent from this table entirely, so the fallthrough `undefined` return
-// below covers them along with LINEAR_BURN/LINEAR_DODGE (no CSS
-// equivalent) and any future/unrecognized blend mode.
-const CSS_BLEND_MODE_BY_FIGMA_BLEND_MODE: Record<
-  string,
-  DesignBundleBlendMode
-> = {
-  MULTIPLY: "multiply",
-  SCREEN: "screen",
-  OVERLAY: "overlay",
-  DARKEN: "darken",
-  LIGHTEN: "lighten",
-  COLOR_DODGE: "color-dodge",
-  COLOR_BURN: "color-burn",
-  HARD_LIGHT: "hard-light",
-  SOFT_LIGHT: "soft-light",
-  DIFFERENCE: "difference",
-  EXCLUSION: "exclusion",
-  HUE: "hue",
-  SATURATION: "saturation",
-  COLOR: "color",
-  LUMINOSITY: "luminosity",
-};
-
+// native keyword for, via the table shared with `html/builderImpl/
+// htmlBlend.ts` and `tailwind/builderImpl/tailwindBlend.ts` (see
+// `common/blendMode.ts` -- this file used to keep its own independent
+// copy of the same 14 entries). PASS_THROUGH/NORMAL map to `undefined`
+// (no blending, same as this schema's other sparse-field opacity/
+// gradient conventions) rather than being listed here with no value --
+// they're absent from that table entirely, so the fallthrough
+// `undefined` return below covers them along with LINEAR_BURN/
+// LINEAR_DODGE (no CSS equivalent) and any future/unrecognized blend
+// mode.
 const nodeBlendMode = (
   node: ConvertedNode,
 ): DesignBundleBlendMode | undefined => {

@@ -1,36 +1,18 @@
 import { HTMLSettings } from "types";
+import {
+  counterAxisAlignToCss,
+  primaryAxisAlignToCss,
+} from "../../common/commonAlign";
 import { formatMultipleJSXArray } from "../../common/parseJSX";
 
 const getFlexDirection = (node: InferredAutoLayoutResult): string =>
   node.layoutMode === "HORIZONTAL" ? "" : "column";
 
-const getJustifyContent = (node: InferredAutoLayoutResult): string => {
-  switch (node.primaryAxisAlignItems) {
-    case undefined:
-    case "MIN":
-      return "flex-start";
-    case "CENTER":
-      return "center";
-    case "MAX":
-      return "flex-end";
-    case "SPACE_BETWEEN":
-      return "space-between";
-  }
-};
+const getJustifyContent = (node: InferredAutoLayoutResult): string =>
+  primaryAxisAlignToCss(node.primaryAxisAlignItems);
 
-const getAlignItems = (node: InferredAutoLayoutResult): string => {
-  switch (node.counterAxisAlignItems) {
-    case undefined:
-    case "MIN":
-      return "flex-start";
-    case "CENTER":
-      return "center";
-    case "MAX":
-      return "flex-end";
-    case "BASELINE":
-      return "baseline";
-  }
-};
+const getAlignItems = (node: InferredAutoLayoutResult): string =>
+  counterAxisAlignToCss(node.counterAxisAlignItems);
 
 const getGap = (node: InferredAutoLayoutResult): string | number =>
   node.itemSpacing > 0 && node.primaryAxisAlignItems !== "SPACE_BETWEEN"
