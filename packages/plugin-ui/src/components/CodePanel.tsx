@@ -1,6 +1,6 @@
 import {
   Framework,
-  DownloadProjectFormat,
+  DownloadFormat,
   LocalCodegenPreferenceOptions,
   PluginSettings,
   SelectPreferenceOptions,
@@ -33,12 +33,9 @@ interface CodePanelProps {
     key: keyof PluginSettings,
     value: PluginSettings[keyof PluginSettings],
   ) => void;
-  onDownloadProject?: (format: DownloadProjectFormat) => void;
-  isDownloadingProject?: boolean;
-  projectDownloadError?: string | null;
-  onDownloadWordPress?: (outputMode: WordPressOutputMode) => void;
-  isDownloadingWordPress?: boolean;
-  wordPressDownloadError?: string | null;
+  onDownload?: (format: DownloadFormat) => void;
+  isDownloading?: boolean;
+  downloadError?: string | null;
   wordPressResult?: {
     outputMode: WordPressOutputMode;
     fileName: string;
@@ -58,12 +55,9 @@ const CodePanel = (props: CodePanelProps) => {
     selectedFramework,
     settings,
     onPreferenceChanged,
-    onDownloadProject,
-    isDownloadingProject = false,
-    projectDownloadError,
-    onDownloadWordPress,
-    isDownloadingWordPress = false,
-    wordPressDownloadError,
+    onDownload,
+    isDownloading = false,
+    downloadError,
     wordPressResult,
   } = props;
   // The WordPress tab doesn't generate code (see XC24)
@@ -184,16 +178,16 @@ const CodePanel = (props: CodePanelProps) => {
             {selectedFramework === "WordPress" ? (
               <WordPressDownloadButton
                 outputMode={settings?.wpOutputMode ?? "theme"}
-                onDownload={onDownloadWordPress}
-                isDownloading={isDownloadingWordPress}
+                onDownload={onDownload}
+                isDownloading={isDownloading}
               />
             ) : (
               <>
-                {onDownloadProject && canDownloadProject && (
+                {onDownload && canDownloadProject && (
                   <DownloadMenu
                     framework={selectedFramework}
-                    onDownload={onDownloadProject}
-                    isDownloading={isDownloadingProject}
+                    onDownload={onDownload}
+                    isDownloading={isDownloading}
                   />
                 )}
                 <CopyButton
@@ -207,15 +201,9 @@ const CodePanel = (props: CodePanelProps) => {
         )}
       </div>
 
-      {projectDownloadError && (
+      {downloadError && (
         <p className="text-sm text-destructive" role="alert">
-          {projectDownloadError}
-        </p>
-      )}
-
-      {wordPressDownloadError && (
-        <p className="text-sm text-destructive" role="alert">
-          {wordPressDownloadError}
+          {downloadError}
         </p>
       )}
 

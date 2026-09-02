@@ -11,12 +11,10 @@ import {
   ErrorMessage,
   SettingsChangedMessage,
   Warning,
-  DownloadProjectFormat,
-  ProjectDownloadErrorMessage,
-  ProjectZipMessage,
+  DownloadFormat,
+  DownloadErrorMessage,
+  DownloadZipMessage,
   WordPressOutputMode,
-  WordPressZipMessage,
-  WordPressDownloadErrorMessage,
   WordPressGenerationSummary,
 } from "types";
 import { postUISettingsChangingMessage } from "./messaging";
@@ -31,14 +29,18 @@ interface AppState {
   colors: SolidColorConversion[];
   gradients: LinearGradientConversion[];
   warnings: Warning[];
-  isDownloadingProject: boolean;
-  projectDownloadError: string | null;
+  // Shared by every framework's download flow, WordPress included --
+  // previously WordPress tracked its own separate
+  // isDownloadingWordPress/wordPressDownloadError pair even though the
+  // plugin sandbox only ever allowed one download (of either kind) to
+  // run at a time anyway (see code.ts's shared isDownloading guard).
+  isDownloading: boolean;
+  downloadError: string | null;
   // Set by the "empty"/"code" backend messages (see XC10)
   isEmptySelection: boolean;
-  // The WordPress tab's own "WP Theme" download flag (see XC11)
-  isDownloadingWordPress: boolean;
-  wordPressDownloadError: string | null;
-  // Last successful WP Theme generation summary (see XC12)
+  // Last successful WordPress generation summary (see XC12). Only ever
+  // populated by a WordPress-format download -- the other five formats'
+  // "zip" messages carry no summary to store here.
   wordPressResult: {
     outputMode: WordPressOutputMode;
     fileName: string;
@@ -77,6 +79,14 @@ const triggerZipDownload = (zip: ArrayBuffer, fileName: string) => {
   URL.revokeObjectURL(url);
 };
 
+// The two wordpress-* DownloadFormat values are the only ones a "zip"
+// message's optional `summary` field is ever populated for -- this
+// recovers the WordPressOutputMode the WordPress feedback panel already
+// expects from the format value the merged download protocol carries
+// instead of a separate `outputMode` field.
+const formatToWordPressOutputMode = (format: DownloadFormat): WordPressOutputMode =>
+  format === "wordpress-design-bundle" ? "designBundle" : "theme";
+
 export default function App() {
   const [state, setState] = useState<AppState>({
     code: "",
@@ -87,11 +97,9 @@ export default function App() {
     colors: [],
     gradients: [],
     warnings: [],
-    isDownloadingProject: false,
-    projectDownloadError: null,
+    isDownloading: false,
+    downloadError: null,
     isEmptySelection: true,
-    isDownloadingWordPress: false,
-    wordPressDownloadError: null,
     wordPressResult: null,
   });
 
@@ -166,50 +174,36 @@ export default function App() {
           copy(JSON.stringify(json, null, 2));
           break;
 
-        case "project-zip": {
-          const zipMessage = untypedMessage as ProjectZipMessage;
+        case "zip": {
+          const zipMessage = untypedMessage as DownloadZipMessage;
           triggerZipDownload(zipMessage.zip, zipMessage.fileName);
           setState((prevState) => ({
             ...prevState,
-            isDownloadingProject: false,
-            projectDownloadError: null,
+            isDownloading: false,
+            downloadError: null,
+            // Only WordPress's two formats carry a summary -- for the
+            // other five, leave whatever wordPressResult was already
+            // there (there's nothing to update it with) rather than
+            // clearing it out from under an unrelated download.
+            wordPressResult:
+              zipMessage.summary !== undefined
+                ? {
+                    outputMode: formatToWordPressOutputMode(zipMessage.format),
+                    fileName: zipMessage.fileName,
+                    warnings: zipMessage.warnings ?? [],
+                    summary: zipMessage.summary,
+                  }
+                : prevState.wordPressResult,
           }));
           break;
         }
 
-        case "project-download-error": {
-          const downloadError = untypedMessage as ProjectDownloadErrorMessage;
+        case "download-error": {
+          const downloadError = untypedMessage as DownloadErrorMessage;
           setState((prevState) => ({
             ...prevState,
-            isDownloadingProject: false,
-            projectDownloadError: downloadError.error,
-          }));
-          break;
-        }
-
-        case "wordpress-zip": {
-          const zipMessage = untypedMessage as WordPressZipMessage;
-          triggerZipDownload(zipMessage.zip, zipMessage.fileName);
-          setState((prevState) => ({
-            ...prevState,
-            isDownloadingWordPress: false,
-            wordPressDownloadError: null,
-            wordPressResult: {
-              outputMode: zipMessage.outputMode,
-              fileName: zipMessage.fileName,
-              warnings: zipMessage.warnings,
-              summary: zipMessage.summary,
-            },
-          }));
-          break;
-        }
-
-        case "wordpress-download-error": {
-          const downloadError = untypedMessage as WordPressDownloadErrorMessage;
-          setState((prevState) => ({
-            ...prevState,
-            isDownloadingWordPress: false,
-            wordPressDownloadError: downloadError.error,
+            isDownloading: false,
+            downloadError: downloadError.error,
           }));
           break;
         }
@@ -250,35 +244,17 @@ export default function App() {
       postUISettingsChangingMessage(key, value, { targetOrigin: "*" });
     }
   };
-  const handleDownloadProject = (format: DownloadProjectFormat) => {
-    if (state.isDownloadingProject) {
+  const handleDownload = (format: DownloadFormat) => {
+    if (state.isDownloading) {
       return;
     }
 
     setState((prevState) => ({
       ...prevState,
-      isDownloadingProject: true,
-      projectDownloadError: null,
+      isDownloading: true,
+      downloadError: null,
     }));
-    parent.postMessage(
-      { pluginMessage: { type: "download-project", format } },
-      "*",
-    );
-  };
-  const handleDownloadWordPress = (outputMode: WordPressOutputMode) => {
-    if (state.isDownloadingWordPress) {
-      return;
-    }
-
-    setState((prevState) => ({
-      ...prevState,
-      isDownloadingWordPress: true,
-      wordPressDownloadError: null,
-    }));
-    parent.postMessage(
-      { pluginMessage: { type: "download-wordpress", outputMode } },
-      "*",
-    );
+    parent.postMessage({ pluginMessage: { type: "download", format } }, "*");
   };
   const darkMode = isDarkFigmaBackground(figmaColorBgValue);
 
@@ -305,13 +281,10 @@ export default function App() {
         settings={state.settings}
         colors={state.colors}
         gradients={state.gradients}
-        onDownloadProject={handleDownloadProject}
-        isDownloadingProject={state.isDownloadingProject}
-        projectDownloadError={state.projectDownloadError}
+        onDownload={handleDownload}
+        isDownloading={state.isDownloading}
+        downloadError={state.downloadError}
         isEmptySelection={state.isEmptySelection}
-        onDownloadWordPress={handleDownloadWordPress}
-        isDownloadingWordPress={state.isDownloadingWordPress}
-        wordPressDownloadError={state.wordPressDownloadError}
         wordPressResult={state.wordPressResult}
       />
     </div>

@@ -1,6 +1,6 @@
 import { Download, LoaderCircle } from "lucide-react";
 import { useState } from "react";
-import { DownloadProjectFormat, Framework } from "types";
+import { DownloadFormat, Framework } from "types";
 import { Button } from "./ui/button";
 import {
   Popover,
@@ -12,13 +12,13 @@ import {
 
 type DownloadMenuProps = {
   framework: Framework;
-  onDownload: (format: DownloadProjectFormat) => void;
+  onDownload: (format: DownloadFormat) => void;
   isDownloading?: boolean;
 };
 
 const downloadOptions: Array<{
   label: string;
-  format: DownloadProjectFormat;
+  format: DownloadFormat;
 }> = [
   {
     label: "Vite",
@@ -62,7 +62,7 @@ const DownloadMenu = ({
   const downloadLabel = getDownloadLabel(framework);
   const buttonLabel = isDownloading ? "Creating project…" : downloadLabel;
 
-  const handleDownload = (format: DownloadProjectFormat) => {
+  const handleDownload = (format: DownloadFormat) => {
     setOpen(false);
     onDownload(format);
   };

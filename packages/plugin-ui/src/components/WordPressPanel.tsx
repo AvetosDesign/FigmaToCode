@@ -1,5 +1,6 @@
 import { Download, LoaderCircle } from "lucide-react";
 import {
+  DownloadFormat,
   WordPressGenerationSummary,
   WordPressOutputMode,
   Warning,
@@ -16,11 +17,12 @@ import FormField from "./CustomPrefixInput";
  * Both outputs are real now: "WP Theme" (`outputMode === "theme"`, see
  * `generateWordPressTheme.ts`) and "Design Bundle" (see
  * `generateDesignBundleZip.ts`) -- both go through code.ts's shared
- * `downloadWordPressOutput`. Follows the same single-icon, no-popover
+ * `downloadWordPressOutput`, taking a `DownloadFormat` like every other
+ * download button in the app. Follows the same single-icon, no-popover
  * visual pattern DownloadMenu.tsx already uses for Flutter/SwiftUI --
- * kept as its own component rather than extending DownloadMenu's props,
- * since DownloadMenu's whole job is resolving a `DownloadProjectFormat`,
- * a type neither WordPress output produces.
+ * kept as its own component rather than folded into DownloadMenu, since
+ * the two differ in icon, label and feedback-panel shape, not in the
+ * type of value they hand back.
  */
 
 const outputLabel: Record<WordPressOutputMode, string> = {
@@ -94,7 +96,7 @@ export const WordPressDownloadButton = ({
   isDownloading = false,
 }: {
   outputMode: WordPressOutputMode;
-  onDownload?: (outputMode: WordPressOutputMode) => void;
+  onDownload?: (format: DownloadFormat) => void;
   isDownloading?: boolean;
 }) => {
   const label = `Download ${outputLabel[outputMode]}`;
@@ -103,6 +105,10 @@ export const WordPressDownloadButton = ({
       ? "Creating theme…"
       : "Creating bundle…"
     : label;
+  // Translate this tab's own outputMode vocabulary into the shared
+  // DownloadFormat currency at the one boundary point where it's needed.
+  const format: DownloadFormat =
+    outputMode === "theme" ? "wordpress-theme" : "wordpress-design-bundle";
 
   return (
     <Button
@@ -111,7 +117,7 @@ export const WordPressDownloadButton = ({
       className="h-8 w-8 bg-neutral-100 text-neutral-800 shadow-sm ring-1 ring-neutral-200 transition-colors duration-300 ease-[cubic-bezier(0.165,0.85,0.45,1)] hover:bg-neutral-200 hover:text-neutral-950 dark:bg-neutral-800/90 dark:text-neutral-200 dark:ring-white/10 dark:hover:bg-neutral-600 dark:hover:text-white dark:hover:ring-white/20"
       aria-label={buttonLabel}
       title={buttonLabel}
-      onClick={() => onDownload?.(outputMode)}
+      onClick={() => onDownload?.(format)}
       disabled={isDownloading || !onDownload}
     >
       {isDownloading ? (

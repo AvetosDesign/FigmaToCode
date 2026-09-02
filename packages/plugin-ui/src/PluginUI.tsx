@@ -8,7 +8,7 @@ import About from "./components/About";
 import WarningsPanel from "./components/WarningsPanel";
 import {
   Framework,
-  DownloadProjectFormat,
+  DownloadFormat,
   HTMLPreview,
   LinearGradientConversion,
   PluginSettings,
@@ -43,15 +43,11 @@ type PluginUIProps = {
   colors: SolidColorConversion[];
   gradients: LinearGradientConversion[];
   isLoading: boolean;
-  onDownloadProject?: (format: DownloadProjectFormat) => void;
-  isDownloadingProject?: boolean;
-  projectDownloadError?: string | null;
+  onDownload?: (format: DownloadFormat) => void;
+  isDownloading?: boolean;
+  downloadError?: string | null;
   // Whether the current Figma selection is empty (see XC17)
   isEmptySelection: boolean;
-  // The WordPress tab's own "WP Theme" download (see XC18)
-  onDownloadWordPress?: (outputMode: WordPressOutputMode) => void;
-  isDownloadingWordPress?: boolean;
-  wordPressDownloadError?: string | null;
   wordPressResult?: {
     outputMode: WordPressOutputMode;
     fileName: string;
@@ -219,12 +215,9 @@ export const PluginUI = (props: PluginUIProps) => {
                 selectPreferenceOptions={selectPreferenceOptions}
                 settings={props.settings}
                 onPreferenceChanged={props.onPreferenceChanged}
-                onDownloadProject={props.onDownloadProject}
-                isDownloadingProject={props.isDownloadingProject}
-                projectDownloadError={props.projectDownloadError}
-                onDownloadWordPress={props.onDownloadWordPress}
-                isDownloadingWordPress={props.isDownloadingWordPress}
-                wordPressDownloadError={props.wordPressDownloadError}
+                onDownload={props.onDownload}
+                isDownloading={props.isDownloading}
+                downloadError={props.downloadError}
                 wordPressResult={props.wordPressResult}
               />
 

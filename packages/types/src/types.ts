@@ -99,33 +99,28 @@ export type ErrorMessage = Message & {
   type: "error";
   error: string;
 };
-export type DownloadProjectFormat =
+// One shared download-message family for every framework's zip download,
+// WordPress included. Previously WordPress had its own separate
+// download-wordpress/wordpress-zip/wordpress-download-error trio running
+// in parallel with this one -- merged so WordPress is just another
+// DownloadFormat value flowing through the same three message types
+// every other framework already used, rather than a structurally
+// distinct protocol bolted on beside it.
+export type DownloadFormat =
   | "flutter"
   | "html"
   | "nextjs"
   | "swiftui"
-  | "vite";
-export type DownloadProjectMessage = Message & {
-  type: "download-project";
-  format: DownloadProjectFormat;
+  | "vite"
+  // WordPress's two output modes (see WordPressOutputMode) -- folded
+  // into this union instead of carried as a separate `outputMode` field
+  // on a WordPress-only message.
+  | "wordpress-theme"
+  | "wordpress-design-bundle";
+export type DownloadMessage = Message & {
+  type: "download";
+  format: DownloadFormat;
 };
-export type ProjectZipMessage = Message & {
-  type: "project-zip";
-  zip: ArrayBuffer;
-  format: DownloadProjectFormat;
-  fileName: string;
-};
-export type ProjectDownloadErrorMessage = Message & {
-  type: "project-download-error";
-  error: string;
-};
-
-// The WordPress tab's download flow (see XC31)
-export type WordPressDownloadMessage = Message & {
-  type: "download-wordpress";
-  outputMode: WordPressOutputMode;
-};
-
 // WP Theme summary (see XC32)
 export interface WordPressGenerationSummary {
   designCount: number;
@@ -134,16 +129,21 @@ export interface WordPressGenerationSummary {
   resolvedFontFamilies: string[];
   unresolvedFontFamilies: string[];
 }
-export type WordPressZipMessage = Message & {
-  type: "wordpress-zip";
+export type DownloadZipMessage = Message & {
+  type: "zip";
   zip: ArrayBuffer;
-  outputMode: WordPressOutputMode;
+  format: DownloadFormat;
   fileName: string;
-  warnings: Warning[];
-  summary: WordPressGenerationSummary;
+  // Only ever populated for the two wordpress-* formats -- the five code
+  // targets have no generation-warnings or summary concept. `undefined`
+  // for those, not an empty array/object, so a consumer can tell "no
+  // summary exists for this format" apart from "this run had nothing to
+  // report."
+  warnings?: Warning[];
+  summary?: WordPressGenerationSummary;
 };
-export type WordPressDownloadErrorMessage = Message & {
-  type: "wordpress-download-error";
+export type DownloadErrorMessage = Message & {
+  type: "download-error";
   error: string;
 };
 

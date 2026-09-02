@@ -1,5 +1,5 @@
 import { zipSync } from "fflate";
-import type { DownloadProjectFormat } from "types";
+import type { DownloadFormat } from "types";
 
 export interface ProjectImage {
   name: string;
@@ -60,7 +60,7 @@ const isTailwindProject = (framework: string) => framework === "Tailwind";
 
 const getImagePath = (
   image: ProjectImage,
-  format: DownloadProjectFormat,
+  format: DownloadFormat,
 ): string => {
   if (format === "flutter") {
     return `assets/images/${image.name}`;
@@ -85,7 +85,7 @@ export const extractProjectImageNodeIds = (code: string): Set<string> => {
 export const replaceProjectImagePlaceholders = (
   code: string,
   images: ProjectImage[],
-  format: DownloadProjectFormat,
+  format: DownloadFormat,
 ): string => {
   const imagesByNodeId = new Map(images.map((image) => [image.nodeId, image]));
   const resolveImage = (encodedNodeId: string): ProjectImage => {
@@ -123,7 +123,7 @@ export function generateProjectZip(
   code: string,
   framework: string,
   images: ProjectImage[],
-  format: DownloadProjectFormat,
+  format: DownloadFormat,
   rootName = "figma-export",
 ): Uint8Array {
   const files: Record<string, Uint8Array> = {};

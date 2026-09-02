@@ -20,7 +20,7 @@ import { flutterCodeGenTextStyles } from "backend/src/flutter/flutterMain";
 import { htmlCodeGenTextStyles } from "backend/src/html/htmlMain";
 import { swiftUICodeGenTextStyles } from "backend/src/swiftui/swiftuiMain";
 import {
-  DownloadProjectFormat,
+  DownloadFormat,
   PluginSettings,
   SettingWillChangeMessage,
   WordPressOutputMode,
@@ -102,7 +102,7 @@ const initSettings = async () => {
 
 // Used to prevent running from happening again.
 let isLoading = false;
-let isDownloadingProject = false;
+let isDownloading = false;
 let rerunAfterDownload = false;
 const safeRun = async (settings: PluginSettings) => {
   console.log(
@@ -111,7 +111,7 @@ const safeRun = async (settings: PluginSettings) => {
     "selectionCount =",
     figma.currentPage.selection.length,
   );
-  if (isDownloadingProject) {
+  if (isDownloading) {
     rerunAfterDownload = true;
     return;
   }
@@ -163,7 +163,7 @@ type ExportedProjectImage = {
 
 const allowedFormatsByFramework: Record<
   "Flutter" | "HTML" | "SwiftUI" | "Tailwind",
-  DownloadProjectFormat[]
+  DownloadFormat[]
 > = {
   Flutter: ["flutter"],
   HTML: ["html", "nextjs", "vite"],
@@ -275,7 +275,7 @@ const getConvertedSelectionForDownload = async (
 
 const generateDownloadCode = async (
   nodes: readonly SceneNode[],
-  format: DownloadProjectFormat,
+  format: DownloadFormat,
   pluginSettings: PluginSettings,
 ) => {
   const convertedSelection = await getConvertedSelectionForDownload(
@@ -327,7 +327,7 @@ const generateDownloadCode = async (
   return result?.html || "<div>Failed to generate HTML</div>";
 };
 
-const downloadProject = async (format: DownloadProjectFormat) => {
+const downloadProject = async (format: DownloadFormat) => {
   if (!["flutter", "html", "nextjs", "swiftui", "vite"].includes(format)) {
     throw new Error(`Invalid download format: ${format}.`);
   }
@@ -335,7 +335,10 @@ const downloadProject = async (format: DownloadProjectFormat) => {
   const pluginSettings = { ...userPluginSettings };
   if (
     pluginSettings.framework === "Compose" ||
-    // WordPress outputs don't go through the download-project path (see XC4)
+    // WordPress's two formats are routed to downloadWordPressOutput
+    // instead by the shared "download" message dispatch below, and are
+    // never valid input to this function -- this check is defense in
+    // depth in case that dispatch is ever bypassed.
     pluginSettings.framework === "WordPress" ||
     !allowedFormatsByFramework[pluginSettings.framework].includes(format)
   ) {
@@ -385,7 +388,7 @@ const downloadProject = async (format: DownloadProjectFormat) => {
   );
 
   figma.ui.postMessage({
-    type: "project-zip",
+    type: "zip",
     zip,
     format,
     fileName: `${rootName}-${format}.zip`,
@@ -395,7 +398,12 @@ const downloadProject = async (format: DownloadProjectFormat) => {
 // F2C's own plugin version (see XC5)
 const PLUGIN_VERSION = "1.0.0";
 
-const downloadWordPressOutput = async (outputMode: WordPressOutputMode) => {
+const downloadWordPressOutput = async (format: DownloadFormat) => {
+  // format is one of the two wordpress-* DownloadFormat values here --
+  // guaranteed by the dispatch in figma.ui.onmessage below, which is the
+  // only caller.
+  const outputMode: WordPressOutputMode =
+    format === "wordpress-design-bundle" ? "designBundle" : "theme";
   const pluginSettings = { ...userPluginSettings };
   const selection = [...figma.currentPage.selection];
   if (selection.length === 0) {
@@ -424,55 +432,55 @@ const downloadWordPressOutput = async (outputMode: WordPressOutputMode) => {
   );
 
   figma.ui.postMessage({
-    type: "wordpress-zip",
+    type: "zip",
     zip,
-    outputMode,
+    format,
     fileName: result.fileName,
     warnings: result.warnings,
     summary: result.summary,
   });
 };
 
-// Shared guard/try-catch/finally shape for the download-project and
-// download-wordpress message handlers below (see XC8): both need the
-// isLoading/isDownloadingProject guards, the same finally-block rerun
-// logic, and differ only in which error-message type they post and two
-// bits of user-facing/log text.
+// Shared guard/try-catch/finally shape for the merged download message
+// handler below: both the code-target and WordPress download paths need
+// the isLoading/isDownloading guards and the same finally-block rerun
+// logic, differing only in two bits of user-facing/log text (the error
+// type itself is now shared too -- both flows post the one
+// "download-error" message).
 const runGuardedDownload = async (
-  errorType: string,
   itemLabel: string,
   logLabel: string,
   action: () => Promise<void>,
 ) => {
   if (isLoading) {
     figma.ui.postMessage({
-      type: errorType,
+      type: "download-error",
       error: "Please wait for the current conversion to finish.",
     });
     return;
   }
 
-  if (isDownloadingProject) {
+  if (isDownloading) {
     figma.ui.postMessage({
-      type: errorType,
+      type: "download-error",
       error: "A project download is already in progress.",
     });
     return;
   }
 
-  isDownloadingProject = true;
+  isDownloading = true;
   try {
     await action();
   } catch (error) {
     console.error(`${logLabel} failed:`, error);
     figma.ui.postMessage({
-      type: errorType,
+      type: "download-error",
       error: `Failed to create ${itemLabel}: ${
         error instanceof Error ? error.message : "Unknown error occurred"
       }`,
     });
   } finally {
-    isDownloadingProject = false;
+    isDownloading = false;
     if (rerunAfterDownload) {
       rerunAfterDownload = false;
       void safeRun(userPluginSettings);
@@ -520,21 +528,17 @@ const standardMode = async () => {
 
     if (msg.type === "ui-ready") {
       await initializeOnce();
-    } else if (msg.type === "download-project") {
+    } else if (msg.type === "download") {
+      const format = msg.format as DownloadFormat;
+      const isWordPress =
+        format === "wordpress-theme" || format === "wordpress-design-bundle";
       await runGuardedDownload(
-        "project-download-error",
-        "project",
-        "Download project",
-        () => downloadProject(msg.format as DownloadProjectFormat),
-      );
-    } else if (msg.type === "download-wordpress") {
-      // Shares isDownloadingProject/rerunAfterDownload with the
-      // download-project path above via runGuardedDownload (see XC8)
-      await runGuardedDownload(
-        "wordpress-download-error",
-        "WordPress theme",
-        "WordPress theme download",
-        () => downloadWordPressOutput(msg.outputMode as WordPressOutputMode),
+        isWordPress ? "WordPress theme" : "project",
+        isWordPress ? "WordPress theme download" : "Download project",
+        () =>
+          isWordPress
+            ? downloadWordPressOutput(format)
+            : downloadProject(format),
       );
     } else if (msg.type === "pluginSettingWillChange") {
       const { key, value } = msg as SettingWillChangeMessage<unknown>;
