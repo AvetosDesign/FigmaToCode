@@ -2,16 +2,7 @@ import { FontWeightNumber } from "types";
 
 // Convert generic named weights to numbers, which is the way tailwind understands.
 //
-// Matches by substring/pattern rather than a single exact-match after
-// stripping spaces/dashes: a plain exact match fails on any compound style
-// name (e.g. "Bold Italic" -> "bolditalic" matches nothing below and used
-// to silently fall back to "400", the wrong weight for a bold style just
-// because it also carried an italic flag). "heavy" maps to "900" (Figma/
-// CSS convention treats it as black-adjacent, alongside "black"), not
-// "800" -- this used to disagree with the WordPress-side equivalents of
-// this same lookup (`wordpress/fromSelection/designBundleTextStyles.ts`'s
-// `fontStyleToWeight`, `wordpress/theme/googleFonts.ts`'s
-// `normalizeFontWeight`), which already agreed on 900.
+// Matches by substring/pattern (see XC46)
 export const convertFontWeight = (weight: string): FontWeightNumber | null => {
   const style = weight.toLowerCase();
   const patterns: Array<[RegExp, FontWeightNumber]> = [

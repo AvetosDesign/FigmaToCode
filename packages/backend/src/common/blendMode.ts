@@ -1,17 +1,6 @@
 /**
  * Figma's non-default blend modes (everything but NORMAL/PASS_THROUGH,
- * which every consumer below already treats as "no declaration needed")
- * mapped to their real CSS `mix-blend-mode`/`background-blend-mode`
- * keyword. This table used to be reimplemented independently in three
- * places -- `html/builderImpl/htmlBlend.ts`'s `htmlBlendMode`,
- * `tailwind/builderImpl/tailwindBlend.ts`'s `tailwindBlendMode` (prefixed
- * with "mix-blend-" for its own utility-class naming), and
- * `wordpress/fromSelection/designBundleTree.ts`'s own copy -- with the
- * same 14 entries maintained by hand in all three. Anything that emits a
- * literal CSS blend-mode keyword should use this table instead of its own
- * switch/object; SwiftUI's `swiftuiBlend.ts` is intentionally NOT one of
- * those consumers, since it maps to SwiftUI's own `.camelCase` enum
- * member names (`.colorDodge`, `.hardLight`, ...), not CSS keywords.
+ * (see XC41)
  */
 export type CssBlendMode =
   | "multiply"

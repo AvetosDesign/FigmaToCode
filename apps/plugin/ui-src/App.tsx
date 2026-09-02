@@ -29,18 +29,11 @@ interface AppState {
   colors: SolidColorConversion[];
   gradients: LinearGradientConversion[];
   warnings: Warning[];
-  // Shared by every framework's download flow, WordPress included --
-  // previously WordPress tracked its own separate
-  // isDownloadingWordPress/wordPressDownloadError pair even though the
-  // plugin sandbox only ever allowed one download (of either kind) to
-  // run at a time anyway (see code.ts's shared isDownloading guard).
   isDownloading: boolean;
   downloadError: string | null;
   // Set by the "empty"/"code" backend messages (see XC10)
   isEmptySelection: boolean;
-  // Last successful WordPress generation summary (see XC12). Only ever
-  // populated by a WordPress-format download -- the other five formats'
-  // "zip" messages carry no summary to store here.
+  // Last successful WordPress generation summary (see XC12)
   wordPressResult: {
     outputMode: WordPressOutputMode;
     fileName: string;
@@ -62,11 +55,7 @@ const isDarkFigmaBackground = (background: string) => {
   );
 };
 
-// Shared download-trigger for both zip message cases below: build a
-// Blob, click a hidden <a download>, then revoke the object URL. The
-// two cases differ only in the AppState fields they set afterward
-// (wordpress-zip also carries a generation summary) -- see App.tsx's
-// own review notes on why *that* tail stays separate.
+// Shared download-trigger (see XC35)
 const triggerZipDownload = (zip: ArrayBuffer, fileName: string) => {
   const blob = new Blob([zip], { type: "application/zip" });
   const url = URL.createObjectURL(blob);
@@ -79,11 +68,7 @@ const triggerZipDownload = (zip: ArrayBuffer, fileName: string) => {
   URL.revokeObjectURL(url);
 };
 
-// The two wordpress-* DownloadFormat values are the only ones a "zip"
-// message's optional `summary` field is ever populated for -- this
-// recovers the WordPressOutputMode the WordPress feedback panel already
-// expects from the format value the merged download protocol carries
-// instead of a separate `outputMode` field.
+// (see XC36)
 const formatToWordPressOutputMode = (format: DownloadFormat): WordPressOutputMode =>
   format === "wordpress-design-bundle" ? "designBundle" : "theme";
 
@@ -181,10 +166,7 @@ export default function App() {
             ...prevState,
             isDownloading: false,
             downloadError: null,
-            // Only WordPress's two formats carry a summary -- for the
-            // other five, leave whatever wordPressResult was already
-            // there (there's nothing to update it with) rather than
-            // clearing it out from under an unrelated download.
+            // Only WordPress's two formats carry a summary (see XC37)
             wordPressResult:
               zipMessage.summary !== undefined
                 ? {

@@ -99,22 +99,14 @@ export type ErrorMessage = Message & {
   type: "error";
   error: string;
 };
-// One shared download-message family for every framework's zip download,
-// WordPress included. Previously WordPress had its own separate
-// download-wordpress/wordpress-zip/wordpress-download-error trio running
-// in parallel with this one -- merged so WordPress is just another
-// DownloadFormat value flowing through the same three message types
-// every other framework already used, rather than a structurally
-// distinct protocol bolted on beside it.
+// (see XC38)
 export type DownloadFormat =
   | "flutter"
   | "html"
   | "nextjs"
   | "swiftui"
   | "vite"
-  // WordPress's two output modes (see WordPressOutputMode) -- folded
-  // into this union instead of carried as a separate `outputMode` field
-  // on a WordPress-only message.
+  // WordPress output modes (see XC39)
   | "wordpress-theme"
   | "wordpress-design-bundle";
 export type DownloadMessage = Message & {
@@ -134,11 +126,7 @@ export type DownloadZipMessage = Message & {
   zip: ArrayBuffer;
   format: DownloadFormat;
   fileName: string;
-  // Only ever populated for the two wordpress-* formats -- the five code
-  // targets have no generation-warnings or summary concept. `undefined`
-  // for those, not an empty array/object, so a consumer can tell "no
-  // summary exists for this format" apart from "this run had nothing to
-  // report."
+  // Only populated for wordpress-* formats (see XC40)
   warnings?: Warning[];
   summary?: WordPressGenerationSummary;
 };

@@ -335,10 +335,7 @@ const downloadProject = async (format: DownloadFormat) => {
   const pluginSettings = { ...userPluginSettings };
   if (
     pluginSettings.framework === "Compose" ||
-    // WordPress's two formats are routed to downloadWordPressOutput
-    // instead by the shared "download" message dispatch below, and are
-    // never valid input to this function -- this check is defense in
-    // depth in case that dispatch is ever bypassed.
+    // Safety net (see XC33)
     pluginSettings.framework === "WordPress" ||
     !allowedFormatsByFramework[pluginSettings.framework].includes(format)
   ) {
@@ -399,9 +396,7 @@ const downloadProject = async (format: DownloadFormat) => {
 const PLUGIN_VERSION = "1.0.0";
 
 const downloadWordPressOutput = async (format: DownloadFormat) => {
-  // format is one of the two wordpress-* DownloadFormat values here --
-  // guaranteed by the dispatch in figma.ui.onmessage below, which is the
-  // only caller.
+  // format is one of the two wordpress-* DownloadFormat values (see XC34)
   const outputMode: WordPressOutputMode =
     format === "wordpress-design-bundle" ? "designBundle" : "theme";
   const pluginSettings = { ...userPluginSettings };

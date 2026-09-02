@@ -1,18 +1,6 @@
 /**
  * Shared Figma auto-layout alignment -> CSS flexbox alignment mapping.
- *
- * Figma's `primaryAxisAlignItems`/`counterAxisAlignItems` (and WordPress's
- * `DesignBundleLayout` equivalents `primaryAxisAlign`/`counterAxisAlign`,
- * which use the same string literals) map onto CSS `justify-content` and
- * `align-items` almost 1:1 — only the keyword names differ. This was
- * previously duplicated between html's `htmlAutoLayout.ts` and
- * WordPress's `styleHelpers.ts`; both now delegate here.
- *
- * The parameter is typed as accepting `undefined` even though Figma's own
- * `AutoLayoutMixin.primaryAxisAlignItems`/`counterAxisAlignItems` and
- * WordPress's `DesignBundleLayout` fields are non-optional, to preserve
- * html's pre-existing defensive handling for any caller that hasn't
- * narrowed the value yet.
+ * (see XC45)
  */
 
 export type PrimaryAxisAlign = "MIN" | "CENTER" | "MAX" | "SPACE_BETWEEN";
