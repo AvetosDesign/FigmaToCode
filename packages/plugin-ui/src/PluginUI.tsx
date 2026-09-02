@@ -99,8 +99,6 @@ const FrameworkTabs = ({
     <div className="grid grid-cols-5 sm:grid-cols-3 md:grid-cols-5 gap-1 grow">
       {frameworks.map((tab) => {
         const isSelected = selectedFramework === tab && !showAbout;
-        // WordPress tab is green (see XC20)
-        const isWordPress = tab === "WordPress";
         return (
           <Button
             variant="ghost"
@@ -109,9 +107,7 @@ const FrameworkTabs = ({
             aria-pressed={isSelected}
             className={`w-full h-8 rounded-md text-sm ${
               isSelected
-                ? isWordPress
-                  ? "bg-green-600 text-white shadow-xs hover:bg-green-600 hover:text-white dark:bg-green-600 dark:hover:bg-green-600"
-                  : "bg-primary text-primary-foreground shadow-xs hover:bg-primary hover:text-primary-foreground dark:hover:bg-primary"
+                ? "bg-primary text-primary-foreground shadow-xs hover:bg-primary hover:text-primary-foreground dark:hover:bg-primary"
                 : "bg-muted text-foreground hover:bg-primary/90 hover:text-primary-foreground dark:hover:bg-primary/90"
             }`}
             onClick={() => {
