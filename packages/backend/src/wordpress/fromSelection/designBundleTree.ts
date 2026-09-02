@@ -75,21 +75,36 @@ export const resetDesignBundleTreeState = () => {
 // Component definition*, and is identical across every Instance of that
 // component regardless of which design placed it — Figma's node-id space is
 // unique file-wide, so this substring alone (no separate componentId lookup
-// needed) already uniquely identifies "the same original node." A node
-// that's directly part of a design's own tree (not inside any Instance) has
-// a plain id with no semicolon and never matches — it is always exported
-// fresh.
+// needed) already uniquely identifies "the same original node."
+//
+// A node that's directly part of a design's own tree (not inside any
+// Instance) has a plain id with no semicolon — that includes an ordinary
+// unique node, but also the literal master Component definition's own
+// children on whatever page defines the component (found live: a real
+// bundle where 4 designs used a footer Instance `I2011:121;1:1468` and a
+// 5th held the footer's actual master-Component definition, whose own
+// child node's plain id was exactly `1:1468` — the same masterChildId every
+// Instance points at). Falling back to the node's own id as its key (rather
+// than `undefined`, which always exported fresh) unifies both forms onto
+// the same key with no ambiguity, since node ids are unique file-wide: the
+// only way a bare id and a stripped `I...;X` key can ever collide is when
+// they name the same underlying node. This also makes registration
+// order-independent — whichever form (bare master-definition node, or
+// `I...;X` Instance descendant) the tree walk reaches first registers the
+// asset; the other looks it up and reuses it, regardless of which design
+// came first in the selection.
 //
 // Deliberately identity-based, not content-based: a downstream consumer is
 // free to layer a separate content-hash pass on top for anything this
-// doesn't explain. This only recognizes "the same node position inside the
-// same component," and deliberately assumes no per-instance content
+// doesn't explain (e.g. two visually-identical but structurally unrelated
+// nodes). This only recognizes "the same node, whether seen directly or
+// through an Instance," and deliberately assumes no per-instance content
 // overrides on shared header/footer content. A real override would
 // currently dedupe silently wrong; revisit if that assumption ever proves
 // false in practice.
 const INSTANCE_DESCENDANT_ID = /^I[^;]+;(.+)$/;
-const assetIdentityKeyFor = (nodeId: string): string | undefined =>
-  INSTANCE_DESCENDANT_ID.exec(nodeId)?.[1];
+const assetIdentityKeyFor = (nodeId: string): string =>
+  INSTANCE_DESCENDANT_ID.exec(nodeId)?.[1] ?? nodeId;
 
 const toSlug = (value: string) =>
   (value || "layer")
@@ -692,13 +707,12 @@ export const buildDesignNode = (
   }
 
   if (type === "IMAGE" || type === "VECTOR") {
-    // Reuse an already-registered asset for the same master-component
-    // node, rather than re-exporting/re-registering an identical copy for
-    // every Instance. See assetIdentityKeyFor's doc comment.
+    // Reuse an already-registered asset for the same underlying node —
+    // whether this occurrence is another Instance descendant sharing a
+    // masterChildId, or the literal master-Component-definition node
+    // itself. See assetIdentityKeyFor's doc comment.
     const identityKey = assetIdentityKeyFor(node.id);
-    const existing = identityKey
-      ? assetIdentityMap.get(identityKey)
-      : undefined;
+    const existing = assetIdentityMap.get(identityKey);
     if (existing) {
       designNode.assetRef = existing.id;
       return designNode;
@@ -720,9 +734,7 @@ export const buildDesignNode = (
       ...(type === "IMAGE" ? { scale: DESIGN_BUNDLE_RASTER_SCALE } : {}),
     };
     assets.push(asset);
-    if (identityKey) {
-      assetIdentityMap.set(identityKey, asset);
-    }
+    assetIdentityMap.set(identityKey, asset);
     designNode.assetRef = assetId;
     // IMAGE/VECTOR nodes are treated as leaves — matches the schema's own
     // examples, and avoids emitting redundant child markup for content a
@@ -744,11 +756,10 @@ export const buildDesignNode = (
     // Same identity-based dedup as the leaf IMAGE/VECTOR branch above
     // — a repeated component instance's own background-image fill (e.g. a
     // Frame background inside a duplicated header/footer) shouldn't be
-    // re-registered per Instance either.
+    // re-registered per Instance either, and neither should the literal
+    // master-Component-definition node's own background fill.
     const identityKey = assetIdentityKeyFor(node.id);
-    const existing = identityKey
-      ? assetIdentityMap.get(identityKey)
-      : undefined;
+    const existing = assetIdentityMap.get(identityKey);
     if (existing) {
       designNode.backgroundAssetRef = existing.id;
     } else {
@@ -769,9 +780,7 @@ export const buildDesignNode = (
         imageHash: backgroundFill.imageRef,
       };
       assets.push(asset);
-      if (identityKey) {
-        assetIdentityMap.set(identityKey, asset);
-      }
+      assetIdentityMap.set(identityKey, asset);
       designNode.backgroundAssetRef = assetId;
     }
   }
