@@ -68,16 +68,24 @@ export const buildThemeTokens = (bundle: DesignBundle): ThemeTokens => {
     fontSizeSlugByTextStyleId.set(textStyleId, slug);
   });
 
-  const familySlugs = new Map<string, string>();
+  // Distinct family names, first-seen order -- collected separately from
+  // slug assignment (unlike colors/fontSizes above) because a family can
+  // repeat across many textStyleEntries and only needs one token. Slugs
+  // still go through the same collision-safe assignUniqueSlugs pass:
+  // calling toPresetSlug directly here (as this used to) let two
+  // distinct families that normalize to the same slug -- "Inter Tight"
+  // and "Inter-Tight", say -- collide, silently dropping one from the
+  // generated theme.json font-family preset list.
+  const familyNames: string[] = [];
   for (const [, style] of textStyleEntries) {
-    if (style.fontFamily && !familySlugs.has(style.fontFamily)) {
-      familySlugs.set(style.fontFamily, toPresetSlug(style.fontFamily));
+    if (style.fontFamily && !familyNames.includes(style.fontFamily)) {
+      familyNames.push(style.fontFamily);
     }
   }
-  const fontFamilies: ThemeFontFamilyToken[] = Array.from(
-    familySlugs,
-    ([fontFamily, slug]) => ({
-      slug,
+  const familySlugValues = assignUniqueSlugs(familyNames, toPresetSlug);
+  const fontFamilies: ThemeFontFamilyToken[] = familyNames.map(
+    (fontFamily, i) => ({
+      slug: familySlugValues[i],
       fontFamily,
       name: fontFamily,
     }),

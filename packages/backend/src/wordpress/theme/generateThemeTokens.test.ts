@@ -135,6 +135,42 @@ describe("buildThemeTokens", () => {
       "Roboto Mono",
     ]);
   });
+
+  it("disambiguates two distinct font families that slugify to the same value", () => {
+    // "Inter Tight" and "Inter-Tight" both slugify to "inter-tight" --
+    // familySlugs used to call toPresetSlug directly instead of routing
+    // through assignUniqueSlugs like colors/fontSizes above, so the
+    // second family's token silently overwrote the first's in the old
+    // Map-keyed-by-slug implementation.
+    const bundle = baseBundle({
+      textStyles: {
+        "ts-1": {
+          name: "A",
+          fontFamily: "Inter Tight",
+          fontSize: 16,
+          fontWeight: "400",
+          lineHeight: 1.4,
+        },
+        "ts-2": {
+          name: "B",
+          fontFamily: "Inter-Tight",
+          fontSize: 16,
+          fontWeight: "400",
+          lineHeight: 1.4,
+        },
+      },
+    });
+    const tokens = buildThemeTokens(bundle);
+    expect(tokens.fontFamilies).toHaveLength(2);
+    expect(tokens.fontFamilies.map((f) => f.fontFamily)).toEqual([
+      "Inter Tight",
+      "Inter-Tight",
+    ]);
+    expect(tokens.fontFamilies.map((f) => f.slug)).toEqual([
+      "inter-tight",
+      "inter-tight-2",
+    ]);
+  });
 });
 
 describe("buildNamedStyleClasses", () => {

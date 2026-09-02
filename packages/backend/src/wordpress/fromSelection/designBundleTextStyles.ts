@@ -7,33 +7,22 @@
  */
 import { DesignBundleTextStyle, DesignNode } from "../core/types/designBundle";
 import { commonLineHeight } from "../../common/commonTextHeightSpacing";
+import { convertFontWeight } from "../../common/convertFontWeight";
 
 /**
  * Best-effort numeric font-weight string from a Figma FontName's `style`
  * (e.g. "Regular", "Semi Bold", "Black Italic"). Figma's TextStyle object
  * has no numeric weight field directly — only the human-readable style
- * name — so this is a keyword match, most-specific pattern first (checking
- * "semi bold" before the plainer "bold" substring, etc.). Falls back to
- * "400" for anything unrecognized rather than guessing further.
+ * name. Delegates to the shared `common/convertFontWeight` keyword-match
+ * table (same "thin"/"semi bold"/"black" etc. patterns, most-specific
+ * first) instead of keeping an independent copy here -- that table also
+ * recognizes hyphenated variants ("extra-light", "semi-bold", ...) this
+ * file's own copy didn't, and a second copy could only ever drift from
+ * it. `convertFontWeight` already falls back to "400" internally; the
+ * `?? "400"` here just satisfies its `| null` return type.
  */
-export const fontStyleToWeight = (styleName: string | undefined): string => {
-  const style = (styleName ?? "").toLowerCase();
-  const patterns: Array<[RegExp, string]> = [
-    [/thin/, "100"],
-    [/extra ?light|ultra ?light/, "200"],
-    [/\blight\b/, "300"],
-    [/medium/, "500"],
-    [/extra ?bold|ultra ?bold/, "800"],
-    [/semi ?bold|demi ?bold/, "600"],
-    [/\bbold\b/, "700"],
-    [/black|heavy/, "900"],
-    [/regular|normal/, "400"],
-  ];
-  for (const [pattern, weight] of patterns) {
-    if (pattern.test(style)) return weight;
-  }
-  return "400";
-};
+export const fontStyleToWeight = (styleName: string | undefined): string =>
+  convertFontWeight(styleName ?? "") ?? "400";
 
 /** Recursively collects every distinct textStyleId referenced by a design's TEXT nodes. */
 export const collectTextStyleIds = (
