@@ -1,6 +1,6 @@
 /**
  * Figma's non-default blend modes (everything but NORMAL/PASS_THROUGH,
- * (see XC41)
+ * (XC41)
  */
 export type CssBlendMode =
   | "multiply"

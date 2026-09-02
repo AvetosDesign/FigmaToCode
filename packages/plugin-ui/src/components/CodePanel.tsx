@@ -60,7 +60,7 @@ const CodePanel = (props: CodePanelProps) => {
     downloadError,
     wordPressResult,
   } = props;
-  // The WordPress tab doesn't generate code (see XC24)
+  // The WordPress tab doesn't generate code (XC24)
   const isCodeEmpty = code === "" && selectedFramework !== "WordPress";
 
   // Helper function to add the prefix before every class (or className) in the code.
@@ -146,7 +146,7 @@ const CodePanel = (props: CodePanelProps) => {
       "showLayerNames",
       "embedImages",
       "embedVectors",
-      // WordPress's "Include Fonts" checkbox  (see XC25)
+      // WordPress's "Include Fonts" checkbox  (XC25)
       "wpIncludeFonts",
     ];
 
@@ -251,7 +251,7 @@ const CodePanel = (props: CodePanelProps) => {
             <div className={hasSettingsBeforeStyling ? "mt-2" : undefined}>
               <SettingsGroup
                 title={
-                  // Renamed for the WordPress tab (see XC26)
+                  // Renamed for the WordPress tab (XC26)
                   selectedFramework === "WordPress"
                     ? "Download Options"
                     : "Styling Options"
@@ -266,7 +266,7 @@ const CodePanel = (props: CodePanelProps) => {
                     onPreferenceChanged={onPreferenceChanged}
                   />
                 )}
-                {/* "Theme Name"/"Bundle Name" (see XC27) */}
+                {/* "Theme Name"/"Bundle Name" (XC27) */}
                 {selectedFramework === "WordPress" && settings && (
                   <WordPressThemeNameField
                     outputMode={settings.wpOutputMode ?? "theme"}

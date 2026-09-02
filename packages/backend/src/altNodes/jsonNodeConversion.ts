@@ -341,7 +341,7 @@ const processNodePair = async (
           parentCumulativeRotation + (jsonNode.rotation || 0),
         );
 
-        // Push the processed group children directly. (see XC14)
+        // Push the processed group children directly. (XC14)
         if (processedChild !== null) {
           const resultNodes = Array.isArray(processedChild)
             ? processedChild
@@ -371,7 +371,7 @@ const processNodePair = async (
   // `jsonNode` originates entirely from `node.exportAsync({ format:
   // "JSON_REST_V1" })` (nodesToJSON, above) — a static snapshot in
   // Figma's REST API v1 shape, not live Plugin API property access.
-  // (see XC15)
+  // (XC15)
   if (
     "layoutPositioning" in figmaNode &&
     (figmaNode as any).layoutPositioning

@@ -2,7 +2,7 @@ import { FontWeightNumber } from "types";
 
 // Convert generic named weights to numbers, which is the way tailwind understands.
 //
-// Matches by substring/pattern (see XC46)
+// Matches by substring/pattern (XC46)
 export const convertFontWeight = (weight: string): FontWeightNumber | null => {
   const style = weight.toLowerCase();
   const patterns: Array<[RegExp, FontWeightNumber]> = [

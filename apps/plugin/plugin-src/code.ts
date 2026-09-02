@@ -49,10 +49,10 @@ export const defaultPluginSettings: PluginSettings = {
   thresholdPercent: 15,
   baseFontFamily: "",
   fontFamilyCustomConfig: {},
-  // WordPress tab defaults (see XC1)
+  // WordPress tab defaults (XC1)
   wpOutputMode: "theme",
   wpIncludeFonts: true,
-  // Placeholder only (see XC2)
+  // Placeholder only (XC2)
   wpThemeName: "",
 };
 
@@ -86,7 +86,7 @@ const getUserSettings = async () => {
   };
 
   userPluginSettings = updatedPluginSrcSettings as PluginSettings;
-  // Seed the theme name from the current file's name (see XC3)
+  // Seed the theme name from the current file's name (XC3)
   userPluginSettings.wpThemeName = figma.root.name;
   console.log("[DEBUG] getUserSettings - Final settings:", userPluginSettings);
   return userPluginSettings;
@@ -335,7 +335,7 @@ const downloadProject = async (format: DownloadFormat) => {
   const pluginSettings = { ...userPluginSettings };
   if (
     pluginSettings.framework === "Compose" ||
-    // Safety net (see XC33)
+    // Safety net (XC33)
     pluginSettings.framework === "WordPress" ||
     !allowedFormatsByFramework[pluginSettings.framework].includes(format)
   ) {
@@ -392,11 +392,11 @@ const downloadProject = async (format: DownloadFormat) => {
   });
 };
 
-// F2C's own plugin version (see XC5)
+// F2C's own plugin version (XC5)
 const PLUGIN_VERSION = "1.0.0";
 
 const downloadWordPressOutput = async (format: DownloadFormat) => {
-  // format is one of the two wordpress-* DownloadFormat values (see XC34)
+  // format is one of the two wordpress-* DownloadFormat values (XC34)
   const outputMode: WordPressOutputMode =
     format === "wordpress-design-bundle" ? "designBundle" : "theme";
   const pluginSettings = { ...userPluginSettings };
@@ -409,7 +409,7 @@ const downloadWordPressOutput = async (format: DownloadFormat) => {
     );
   }
 
-  // Both outputs share buildBundleFromSelection  (see XC6)
+  // Both outputs share buildBundleFromSelection  (XC6)
   const result =
     outputMode === "theme"
       ? await generateWordPressTheme(selection, pluginSettings, {
@@ -420,7 +420,7 @@ const downloadWordPressOutput = async (format: DownloadFormat) => {
           bundleName: pluginSettings.wpThemeName,
         });
 
-  // No artificial size ceiling here (see XC7)
+  // No artificial size ceiling here (XC7)
   const zip = result.zip.buffer.slice(
     result.zip.byteOffset,
     result.zip.byteOffset + result.zip.byteLength,
@@ -539,7 +539,7 @@ const standardMode = async () => {
       const { key, value } = msg as SettingWillChangeMessage<unknown>;
       console.log(`[DEBUG] Setting changed: ${key} = ${value}`);
       (userPluginSettings as any)[key] = value;
-      // Do not persist wpThemeName (see XC9)
+      // Do not persist wpThemeName (XC9)
       const settingsToPersist = { ...userPluginSettings };
       delete (settingsToPersist as any).wpThemeName;
       figma.clientStorage.setAsync("userPluginSettings", settingsToPersist);

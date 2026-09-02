@@ -46,7 +46,7 @@ type PluginUIProps = {
   onDownload?: (format: DownloadFormat) => void;
   isDownloading?: boolean;
   downloadError?: string | null;
-  // Whether the current Figma selection is empty (see XC17)
+  // Whether the current Figma selection is empty (XC17)
   isEmptySelection: boolean;
   wordPressResult?: {
     outputMode: WordPressOutputMode;
@@ -56,7 +56,7 @@ type PluginUIProps = {
   } | null;
 };
 
-// "WordPress" added as a fifth tab (see XC19)
+// "WordPress" added as a fifth tab (XC19)
 const frameworks: Framework[] = [
   "HTML",
   "Tailwind",

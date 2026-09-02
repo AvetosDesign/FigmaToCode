@@ -81,7 +81,7 @@ export const calculateAngle = (
 };
 
 /**
- * Figma's LINEAR gradient handle axis -> CSS (see XC42)
+ * Figma's LINEAR gradient handle axis -> CSS (XC42)
  */
 export const linearGradientCssAngle = (
   start: { x: number; y: number },
@@ -90,7 +90,7 @@ export const linearGradientCssAngle = (
 
 /**
  * Figma's RADIAL gradient handles (center, x-axis handle, y-axis handle,
- * normalized 0-1) -> CSS (see XC43)
+ * normalized 0-1) -> CSS (XC43)
  */
 export const radialGradientCssGeometry = (
   center: { x: number; y: number },
@@ -105,7 +105,7 @@ export const radialGradientCssGeometry = (
 };
 
 /**
- * Figma's ANGULAR (conic) gradient handles -> CSS (see XC44)
+ * Figma's ANGULAR (conic) gradient handles -> CSS (XC44)
  */
 export const angularGradientCssGeometry = (
   center: { x: number; y: number },

@@ -31,9 +31,9 @@ interface AppState {
   warnings: Warning[];
   isDownloading: boolean;
   downloadError: string | null;
-  // Set by the "empty"/"code" backend messages (see XC10)
+  // Set by the "empty"/"code" backend messages (XC10)
   isEmptySelection: boolean;
-  // Last successful WordPress generation summary (see XC12)
+  // Last successful WordPress generation summary (XC12)
   wordPressResult: {
     outputMode: WordPressOutputMode;
     fileName: string;
@@ -55,7 +55,7 @@ const isDarkFigmaBackground = (background: string) => {
   );
 };
 
-// Shared download-trigger (see XC35)
+// Shared download-trigger (XC35)
 const triggerZipDownload = (zip: ArrayBuffer, fileName: string) => {
   const blob = new Blob([zip], { type: "application/zip" });
   const url = URL.createObjectURL(blob);
@@ -68,7 +68,7 @@ const triggerZipDownload = (zip: ArrayBuffer, fileName: string) => {
   URL.revokeObjectURL(url);
 };
 
-// (see XC36)
+// (XC36)
 const formatToWordPressOutputMode = (format: DownloadFormat): WordPressOutputMode =>
   format === "wordpress-design-bundle" ? "designBundle" : "theme";
 
@@ -166,7 +166,7 @@ export default function App() {
             ...prevState,
             isDownloading: false,
             downloadError: null,
-            // Only WordPress's two formats carry a summary (see XC37)
+            // Only WordPress's two formats carry a summary (XC37)
             wordPressResult:
               zipMessage.summary !== undefined
                 ? {

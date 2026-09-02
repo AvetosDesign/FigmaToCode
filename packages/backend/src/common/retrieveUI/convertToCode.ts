@@ -19,7 +19,7 @@ export const convertToCode = async (
     case "Compose":
       return composeMain(nodes, settings);
     case "WordPress":
-      // The WordPress tab doesn't show syntax-highlighted code (see XC16)
+      // The WordPress tab doesn't show syntax-highlighted code (XC16)
       return "";
     case "HTML":
     default:

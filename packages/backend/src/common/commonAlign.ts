@@ -1,6 +1,6 @@
 /**
  * Shared Figma auto-layout alignment -> CSS flexbox alignment mapping.
- * (see XC45)
+ * (XC45)
  */
 
 export type PrimaryAxisAlign = "MIN" | "CENTER" | "MAX" | "SPACE_BETWEEN";

@@ -30,7 +30,7 @@ const defaultSettings: PluginSettings = {
   fontFamilyCustomConfig: {},
   wpOutputMode: "theme",
   wpIncludeFonts: true,
-  // Use Figma filename as default (see XC13)
+  // Use Figma filename as default (XC13)
   wpThemeName: "",
 };
 

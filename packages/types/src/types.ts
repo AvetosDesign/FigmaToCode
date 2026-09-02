@@ -6,7 +6,7 @@ export type Framework =
   | "HTML"
   | "Tailwind"
   | "Compose"
-  // Figma -> WordPress pipeline (see XC28)
+  // Figma -> WordPress pipeline (XC28)
   | "WordPress";
 export interface HTMLSettings {
   showLayerNames: boolean;
@@ -39,14 +39,14 @@ export interface ComposeSettings {
   composeGenerationMode: "snippet" | "composable" | "screen";
 }
 /**
- * The WordPress tab's settings (see XC29)
+ * The WordPress tab's settings (XC29)
  */
 export type WordPressOutputMode = "theme" | "designBundle";
 export interface WordPressSettings {
   wpOutputMode: WordPressOutputMode;
   wpIncludeFonts: boolean;
   /**
-   * The WordPress tab's "Theme Name" field (see XC30)
+   * The WordPress tab's "Theme Name" field (XC30)
    */
   wpThemeName: string;
 }
@@ -99,21 +99,21 @@ export type ErrorMessage = Message & {
   type: "error";
   error: string;
 };
-// (see XC38)
+// (XC38)
 export type DownloadFormat =
   | "flutter"
   | "html"
   | "nextjs"
   | "swiftui"
   | "vite"
-  // WordPress output modes (see XC39)
+  // WordPress output modes (XC39)
   | "wordpress-theme"
   | "wordpress-design-bundle";
 export type DownloadMessage = Message & {
   type: "download";
   format: DownloadFormat;
 };
-// WP Theme summary (see XC32)
+// WP Theme summary (XC32)
 export interface WordPressGenerationSummary {
   designCount: number;
   assetCount: number;
@@ -126,7 +126,7 @@ export type DownloadZipMessage = Message & {
   zip: ArrayBuffer;
   format: DownloadFormat;
   fileName: string;
-  // Only populated for wordpress-* formats (see XC40)
+  // Only populated for wordpress-* formats (XC40)
   warnings?: Warning[];
   summary?: WordPressGenerationSummary;
 };

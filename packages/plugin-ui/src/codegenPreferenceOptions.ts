@@ -62,7 +62,7 @@ export const preferenceOptions: LocalCodegenPreferenceOptions[] = [
     includedLanguages: ["HTML", "Tailwind"],
   },
   {
-    // The WordPress tab's "Download Options" checkbox (see XC21)
+    // The WordPress tab's "Download Options" checkbox (XC21)
     itemType: "individual_select",
     propertyName: "wpIncludeFonts",
     label: "Include Fonts",
@@ -131,10 +131,10 @@ export const selectPreferenceOptions: SelectPreferenceOptions[] = [
     includedLanguages: ["Compose"],
   },
   {
-    // The "WordPress Options" two-option button-group  (see XC22)
+    // The "WordPress Options" two-option button-group  (XC22)
     itemType: "select",
     propertyName: "wpOutputMode",
-    // Note: this top-level `label` is unused  (see XC23)
+    // Note: this top-level `label` is unused  (XC23)
     label: "Mode",
     options: [
       { label: "WP Theme", value: "theme", isDefault: true },
