@@ -378,11 +378,11 @@ const nodeOpacity = (node: ConvertedNode): number | undefined => {
   return value < 1 ? value : undefined;
 };
 
-// Figma's 18 `BlendMode` values -> the 13 CSS `mix-blend-mode` has a
+// Figma's 18 `BlendMode` values -> the 15 CSS `mix-blend-mode` has a
 // native keyword for, via the table shared with `html/builderImpl/
 // htmlBlend.ts` and `tailwind/builderImpl/tailwindBlend.ts` (see
 // `common/blendMode.ts` -- this file used to keep its own independent
-// copy of the same 14 entries). PASS_THROUGH/NORMAL map to `undefined`
+// copy of the same 15 entries). PASS_THROUGH/NORMAL map to `undefined`
 // (no blending, same as this schema's other sparse-field opacity/
 // gradient conventions) rather than being listed here with no value --
 // they're absent from that table entirely, so the fallthrough

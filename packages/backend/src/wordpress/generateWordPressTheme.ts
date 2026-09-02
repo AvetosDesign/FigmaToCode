@@ -8,10 +8,10 @@
  * framework's project download), so the plugin sandbox's message handler
  * (`apps/plugin/plugin-src/code.ts`) has exactly one function to call.
  *
- * Deliberately excludes "Design Bundle" mode -- that output has no
- * generation path of its own yet (an old standalone zip-building code
- * path was removed earlier and rebuilding it is a separate, unscheduled
- * follow-up), so this only ever produces a theme.
+ * Deliberately excludes "Design Bundle" mode -- that output has its own
+ * call site, `generateDesignBundleZip` (invoked from
+ * `apps/plugin/plugin-src/code.ts` alongside this function), rather than
+ * being routed through here. This function only ever produces a theme.
  */
 import { zipSync } from "fflate";
 import { PluginSettings } from "types";

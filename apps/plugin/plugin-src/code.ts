@@ -527,9 +527,22 @@ const standardMode = async () => {
       const format = msg.format as DownloadFormat;
       const isWordPress =
         format === "wordpress-theme" || format === "wordpress-design-bundle";
+      // Both wordpress-* formats used to share the "WordPress theme"
+      // label here, so a failed Design Bundle generation surfaced the
+      // misleading error "Failed to create WordPress theme." The format
+      // is already known at this point -- use it.
+      const isDesignBundle = format === "wordpress-design-bundle";
       await runGuardedDownload(
-        isWordPress ? "WordPress theme" : "project",
-        isWordPress ? "WordPress theme download" : "Download project",
+        isDesignBundle
+          ? "Design Bundle"
+          : isWordPress
+            ? "WordPress theme"
+            : "project",
+        isDesignBundle
+          ? "Design Bundle download"
+          : isWordPress
+            ? "WordPress theme download"
+            : "Download project",
         () =>
           isWordPress
             ? downloadWordPressOutput(format)

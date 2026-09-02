@@ -37,16 +37,35 @@ export const toPresetSlug = (value: string): string =>
  * first-seen-wins order). `slugFn` defaults to `toSlug` (template
  * filenames); pass `toPresetSlug` for anything that becomes a WP preset
  * slug instead (see `toPresetSlug`'s own doc comment above).
+ *
+ * The suffix search checks against every slug *already emitted*
+ * (including earlier suffixed ones), not just how many times the base
+ * has been seen -- a plain per-base counter can still hand out a
+ * duplicate: `["Hero", "Hero", "Hero 2"]` would previously produce
+ * `["hero", "hero-2", "hero-2"]`, because the third name's own base
+ * ("hero-2") collides with the second name's *suffixed* slug, which the
+ * counter never recorded. Downstream writers key output files on these
+ * slugs, so a collision here means one design's file silently overwrites
+ * another's in the generated archive.
  */
 export const assignUniqueSlugs = (
   names: readonly string[],
   slugFn: (value: string) => string = toSlug,
 ): string[] => {
-  const seen = new Map<string, number>();
+  const used = new Set<string>();
   return names.map((name) => {
     const base = slugFn(name);
-    const count = seen.get(base) ?? 0;
-    seen.set(base, count + 1);
-    return count === 0 ? base : `${base}-${count + 1}`;
+    if (!used.has(base)) {
+      used.add(base);
+      return base;
+    }
+    let suffix = 2;
+    let candidate = `${base}-${suffix}`;
+    while (used.has(candidate)) {
+      suffix += 1;
+      candidate = `${base}-${suffix}`;
+    }
+    used.add(candidate);
+    return candidate;
   });
 };

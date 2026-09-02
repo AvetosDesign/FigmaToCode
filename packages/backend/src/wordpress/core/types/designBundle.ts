@@ -103,7 +103,7 @@ export interface DesignBundleEffect {
   // already match.
   spread?: number;
 }
-// The 13 of Figma's 18 blend modes CSS `mix-blend-mode` has a native
+// The 15 of Figma's 18 blend modes CSS `mix-blend-mode` has a native
 // keyword for — a plain kebab-case rename in every case (MULTIPLY ->
 // "multiply", etc.). PASS_THROUGH/NORMAL are deliberately absent: both
 // mean "no blending," so `DesignBundleNodeStyle.blendMode` is left

@@ -27,6 +27,31 @@ const MODERN_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 /**
+ * `resolveGoogleFonts` can run inside the Figma plugin sandbox, not just
+ * Stage 2's normal Node.js process (see this file's top doc comment) --
+ * and `AbortSignal.timeout()` is not supported there. Without an
+ * explicit timeout, a stalled CSS or font-file request never rejects,
+ * which leaves the caller's `isDownloading` flag stuck `true` and blocks
+ * every queued `safeRun` call behind it indefinitely. This wraps a fetch
+ * in a manual `AbortController` + `setTimeout` instead, which works in
+ * both environments.
+ */
+const GOOGLE_FONTS_TIMEOUT_MS = 15_000;
+
+const fetchWithTimeout = (
+  fetchImpl: typeof fetch,
+  input: Parameters<typeof fetch>[0],
+  init?: RequestInit,
+  timeoutMs: number = GOOGLE_FONTS_TIMEOUT_MS,
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetchImpl(input, { ...init, signal: controller.signal }).finally(
+    () => clearTimeout(timer),
+  );
+};
+
+/**
  * Figma's `fontWeight` (`DesignBundleTextSegment.fontWeight`) can be a
  * numeric-looking string ("400") or a named weight ("Bold", "Regular",
  * "SemiBold", etc.) depending on the font's own style-naming convention —
@@ -195,7 +220,7 @@ export const resolveGoogleFonts = async (
     let css: string;
     try {
       const url = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weights.join(";")}&display=swap`;
-      const res = await fetchImpl(url, {
+      const res = await fetchWithTimeout(fetchImpl, url, {
         headers: { "User-Agent": MODERN_UA },
       });
       if (!res.ok) {
@@ -230,7 +255,7 @@ export const resolveGoogleFonts = async (
     let subsetIndex = 0;
     for (const rule of parsed) {
       try {
-        const fileRes = await fetchImpl(rule.srcUrl);
+        const fileRes = await fetchWithTimeout(fetchImpl, rule.srcUrl);
         if (!fileRes.ok) {
           warn(
             `Font file download failed for "${family}" weight ${rule.weight} (HTTP ${fileRes.status}).`,

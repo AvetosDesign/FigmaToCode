@@ -158,13 +158,21 @@ const renderField = (
     return addRule(ctx.stylesheet, "form", cls, decl);
   })();
 
-  const valueAttr = detected.isValue
+  // `<textarea>` has no `value` attribute in HTML -- its content is the
+  // element's text, not an attribute. Only `<input>` gets a `value`
+  // attribute for the isValue case; a textarea gets a `placeholder`
+  // attribute only when it *isn't* pre-filled (isValue puts the text
+  // between the tags instead, just below).
+  const inputValueAttr = detected.isValue
     ? attr("value", valueText)
+    : attr("placeholder", valueText);
+  const textareaAttr = detected.isValue
+    ? ""
     : attr("placeholder", valueText);
 
   const controlHtml = isTextareaField(detected.fieldName)
-    ? `<textarea id="${id}" name="${fieldSlug}" rows="4"${attr("class", fieldClass)}${valueAttr}>${detected.isValue ? valueText : ""}</textarea>`
-    : `<input type="${inputTypeFor(detected.fieldName)}" id="${id}" name="${fieldSlug}"${attr("class", fieldClass)}${valueAttr}/>`;
+    ? `<textarea id="${id}" name="${fieldSlug}" rows="4"${attr("class", fieldClass)}${textareaAttr}>${detected.isValue ? valueText : ""}</textarea>`
+    : `<input type="${inputTypeFor(detected.fieldName)}" id="${id}" name="${fieldSlug}"${attr("class", fieldClass)}${inputValueAttr}/>`;
 
   return (
     `<div${attr("class", wrapperClass)}>` +

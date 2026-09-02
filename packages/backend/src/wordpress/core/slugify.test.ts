@@ -64,4 +64,17 @@ describe("assignUniqueSlugs", () => {
       "a-1-b-2-2",
     ]);
   });
+
+  it("never hands out a slug that collides with an earlier *suffixed* slug", () => {
+    // "Hero 2" slugifies to the same "hero-2" that the second "Hero"
+    // would otherwise be assigned -- the fix must keep searching past
+    // that collision instead of stopping at a per-base counter.
+    expect(assignUniqueSlugs(["Hero", "Hero", "Hero 2"])).toEqual([
+      "hero",
+      "hero-2",
+      "hero-2-2",
+    ]);
+    const slugs = assignUniqueSlugs(["Hero", "Hero", "Hero 2"]);
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
 });

@@ -1,6 +1,11 @@
 /**
- * Figma's non-default blend modes (everything but NORMAL/PASS_THROUGH,
- * (XC41)
+ * The 15 of Figma's 18 blend modes CSS `mix-blend-mode` has a native
+ * keyword for -- everything but NORMAL/PASS_THROUGH (both mean "no
+ * blending," so callers leave blendMode undefined for them rather than
+ * modeling it as a value) and LINEAR_BURN/LINEAR_DODGE (a different
+ * blend formula than color-burn/color-dodge, with no CSS equivalent).
+ * Shared by the HTML and Tailwind backends, which used to each keep
+ * their own independently-maintained copy of this same table.
  */
 export type CssBlendMode =
   | "multiply"
