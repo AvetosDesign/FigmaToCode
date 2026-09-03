@@ -495,9 +495,17 @@ const pruneTemplatePartChildren = (
     // header already filtered out above -- pickBottommostChild returns
     // undefined for a length-<=1 array, so a two-child root (header +
     // footer) would silently stop detecting the footer the moment the
-    // header was removed from `children`, leaving the footer duplicated
-    // in both the content pattern and its own Template Part.
-    const footerChild = pickBottommostChild(originalChildren);
+    // header was removed from `children`. That guard also misfires on
+    // its own original input when *this specific design's* root has
+    // only one child to begin with -- a footer with no header above it
+    // (the header/footer classification is a bundle-wide majority vote;
+    // not every design necessarily has both, even when both were
+    // classified overall). Bypass the guard directly for that case
+    // instead of going through pickBottommostChild at all.
+    const footerChild =
+      originalChildren.length === 1
+        ? originalChildren[0]
+        : pickBottommostChild(originalChildren);
     if (
       footerChild?.componentId === parts.footer.componentId &&
       children.some((c) => c.id === footerChild.id)

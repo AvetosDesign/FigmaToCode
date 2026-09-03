@@ -156,6 +156,69 @@ const bundleWithHeaderAndFooter = (): DesignBundle => {
   };
 };
 
+/**
+ * Three designs: two with a header + footer (componentIds shared across
+ * both, so classifyTemplateParts's majority vote -- >50% of designs --
+ * classifies both as shared Template Parts), and a third whose root has
+ * *only* the classified footer as its single child (no header at all --
+ * not every design necessarily carries both, even once both are
+ * classified bundle-wide). This is the CodeRabbit-flagged gap left by
+ * the original originalChildren fix: pickBottommostChild still returns
+ * undefined for a length-<=1 array, and the third design's root *starts*
+ * at length 1 -- there's no header removal to blame it on this time.
+ */
+const bundleWithFooterOnlyDesign = (): DesignBundle => {
+  const design = (n: number, includeHeader: boolean) => ({
+    figmaNodeId: `${n}:1`,
+    layerName: `Design ${n}`,
+    root: {
+      ...emptyRoot,
+      layout: {
+        ...emptyRoot.layout,
+        sizing: { width: "fill" as const, height: 600 },
+      },
+      children: includeHeader
+        ? [
+            imageNode(`header-${n}`, "HEADER_COMPONENT", "header-asset", 0, 50),
+            imageNode(`footer-${n}`, "FOOTER_COMPONENT", "footer-asset", 500, 50),
+          ]
+        : [imageNode(`footer-${n}`, "FOOTER_COMPONENT", "footer-asset", 0, 50)],
+    } as never,
+  });
+
+  return {
+    schemaVersion: 1,
+    meta: {
+      figmaFileKey: "key",
+      figmaFileName: "Test File",
+      figmaPageName: "Page 1",
+      exportedAt: "2026-01-01T00:00:00.000Z",
+      exportedBy: "tester",
+      sourceTool: "FigmaToCode",
+    },
+    designs: [design(1, true), design(2, true), design(3, false)],
+    assets: [
+      {
+        id: "header-asset",
+        figmaNodeId: "1:2",
+        fileName: "assets/header.png",
+        kind: "raster",
+        width: 10,
+        height: 10,
+      },
+      {
+        id: "footer-asset",
+        figmaNodeId: "1:3",
+        fileName: "assets/footer-marker.png",
+        kind: "raster",
+        width: 10,
+        height: 10,
+      },
+    ],
+    styles: { colors: {}, textStyles: {} },
+  };
+};
+
 describe("generateThemeFiles -- F2C in-memory generation", () => {
   it("in-memory sink always produces a fresh {major}.{minor}.0 version -- no 'previous run' to bump against", async () => {
     const bundle = bundleWithImage();
@@ -226,6 +289,48 @@ describe("generateThemeFiles -- F2C in-memory generation", () => {
     expect(filesContainingFooterAsset.map(([path]) => path)).toEqual([
       "patterns/footer.php",
     ]);
+  });
+
+  it("prunes a classified footer even when a design's own root has only that footer as its single child", async () => {
+    const bundle = bundleWithFooterOnlyDesign();
+    const assets = {
+      "assets/header.png": new Uint8Array([1]),
+      "assets/footer-marker.png": new Uint8Array([2]),
+    };
+    const memSink = createInMemorySink();
+    const result = await generateThemeFiles(bundle, assets, memSink, undefined, {
+      downloadFonts: false,
+      cliVersion: "1.0.0",
+    });
+
+    expect(result.templateParts.footer).toBeTruthy();
+    expect(Object.keys(memSink.files)).toContain("parts/footer.html");
+
+    // Design 3's own starter pattern (patterns/design-3.php) must not
+    // carry the footer's asset -- only the shared footer Template Part
+    // pattern (patterns/footer.php) may. Before the fix, a length-1 root
+    // (no header to blame the pruning skip on this time) defeated
+    // pickBottommostChild's own <= 1 guard the same way a header-pruned
+    // two-child root did.
+    const patternFiles = Object.entries(memSink.files).filter(([path]) =>
+      path.startsWith("patterns/"),
+    );
+    const decoded = patternFiles.map(
+      ([path, bytes]) =>
+        [path, new TextDecoder().decode(bytes)] as [string, string],
+    );
+    const filesContainingFooterAsset = decoded.filter(([, content]) =>
+      content.includes("footer-marker.png"),
+    );
+    expect(filesContainingFooterAsset.map(([path]) => path)).toEqual([
+      "patterns/footer.php",
+    ]);
+
+    const design3Pattern = decoded.find(
+      ([path]) => path === "patterns/design-3.php",
+    );
+    expect(design3Pattern).toBeTruthy();
+    expect(design3Pattern?.[1]).not.toContain("footer-marker.png");
   });
 });
 
